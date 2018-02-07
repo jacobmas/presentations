@@ -1,0 +1,136 @@
+\documentclass[11pt,t]{beamer}
+\mode<presentation> {\usetheme{NIST}}
+
+\usepackage{colortbl}
+\usepackage{multirow}
+
+\title{Ramstake}
+\author{Jacob Alperin-Sheriff}
+\institute{NIST}
+
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+
+
+\usepackage{environ}% Required for \NewEnviron, i.e. to read the whole body of the environment
+\makeatletter
+
+\newcounter{acolumn}%  Number of current column
+\newlength{\acolumnmaxheight}%   Maximum column height
+
+
+% `column` replacement to measure height
+\newenvironment{@acolumn}[1]{%
+    \stepcounter{acolumn}%
+    \begin{lrbox}{\@tempboxa}%
+    \begin{minipage}{#1}%
+}{%
+    \end{minipage}
+    \end{lrbox}
+    \@tempdimc=\dimexpr\ht\@tempboxa+\dp\@tempboxa\relax
+    % Save height of this column:
+    \expandafter\xdef\csname acolumn@height@\roman{acolumn}\endcsname{\the\@tempdimc}%
+    % Save maximum height
+    \ifdim\@tempdimc>\acolumnmaxheight
+        \global\acolumnmaxheight=\@tempdimc
+    \fi
+}
+
+% `column` wrapper which sets the height beforehand
+\newenvironment{@@acolumn}[1]{%
+    \stepcounter{acolumn}%
+    % The \autoheight macro contains a \vspace macro with the maximum height minus the natural column height
+    \edef\autoheight{\noexpand\vspace*{\dimexpr\acolumnmaxheight-\csname acolumn@height@\roman{acolumn}\endcsname\relax}}%
+    % Call original `column`:
+    \orig@column{#1}%
+}{%
+    \endorig@column
+}
+
+% Save orignal `column` environment away
+\let\orig@column\column
+\let\endorig@column\endcolumn
+
+% `columns` variant with automatic height adjustment
+\NewEnviron{acolumns}[1][]{%
+    % Init vars:
+    \setcounter{acolumn}{0}%
+    \setlength{\acolumnmaxheight}{0pt}%
+    \def\autoheight{\vspace*{0pt}}%
+    % Set `column` environment to special measuring environment
+    \let\column\@acolumn
+    \let\endcolumn\end@acolumn
+    \BODY% measure heights
+    % Reset counter for second processing round
+    \setcounter{acolumn}{0}%
+    % Set `column` environment to wrapper
+    \let\column\@@acolumn
+    \let\endcolumn\end@@acolumn
+    % Finally process columns now for real
+    \begin{columns}[#1]%
+        \BODY
+    \end{columns}%
+}
+\makeatother
+
+\begin{document}
+
+%title page
+    \setbeamertemplate{headline}[title_page]
+    \setbeamertemplate{footline}[title_page]
+    \csname beamer@calculateheadfoot\endcsname %recalculate head and foot dimension
+        \begin{frame}
+            \titlepage
+        \end{frame}
+%head and foot for body text    
+    \setbeamertemplate{headline}[body]
+    \setbeamertemplate{footline}[body]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Outline}
+    \vskip 5mm
+    {\parbox{.95\textwidth}{\tableofcontents[hideallsubsections]}}
+\end{frame}
+
+%\begin{frame}
+%    \titlepage
+%\end{frame}
+%
+%\begin{frame}
+%    \frametitle{Overview}
+%
+%    %\tableofcontents
+%    \begin{itemize}
+%        \item Scope of the project
+%        \item Bayesian language models
+%        \item Results
+%        \item Research plan
+%        \item Side projects
+%        \item Reflections
+%        \item Formalities
+%    \end{itemize}
+%
+%\end{frame}
+\section{Scope of the project}
+
+\begin{frame}    
+    \frametitle{Scope of the project}
+
+    \begin{block}{Scope}
+        \begin{itemize}
+            \item Language models
+            \item Latent variable models
+            \item Domain-dependence of LVLM
+            \item Intrinsic \& extrinsic evaluation
+        \end{itemize}
+    \end{block}
+
+    \begin{block}{Goal}
+        \begin{itemize}
+            \item Bring back language modelling in Bayesian language modelling    
+            \item Improve cross domain language modelling with skipgrams
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+
+\end{document}
