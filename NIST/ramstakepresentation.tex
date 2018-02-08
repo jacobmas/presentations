@@ -73,6 +73,8 @@
 }
 \makeatother
 
+\newcommand{\Red}[1]{{\textcolor{red} #1}}
+
 \begin{document}
 
 %title page
@@ -111,23 +113,36 @@
 %    \end{itemize}
 %
 %\end{frame}
-\section{Scope of the project}
+\section{Basic Idea}
 
 \begin{frame}    
-    \frametitle{Scope of the project}
+    \frametitle{Another Variation on Learning With Errors}
 
-    \begin{block}{Scope}
-        \begin{itemize}
-            \item Language models
-            \item Latent variable models
-            \item Domain-dependence of LVLM
-            \item Intrinsic \& extrinsic evaluation
-        \end{itemize}
+    \begin{block}{(Ring)-LWE reminder, $q=\poly(\lambda)$}
+        \begin{description}
+            \item[KeyGen$(1^{\lambda})$:]
+\begin{itemize}
+\item Sample uniform $a \gets R$, \alert{short} (Euclidean norm)
+              $\Red{s},\Red{e}$. 
+\item Output $(a,b=\Red{s}\cdot a +
+              \Red{e})$
+\end{itemize}
+            \item[Enc$(\mu)$:] 
+\begin{itemize}
+  \item Sample \alert{short} (Euclidean norm)
+              $\Red{r},\Red{e}_1, \Red{e}_2$.
+            \item Output  
+              $c=(a\cdot \Red{r}+\Red{e}_1, b\cdot
+              \Red{r}+\Red{e}_2+(q/2)\mu)$
+\end{itemize}
+             \item[Dec$(c)$:] Compute $u=c_1\Red{s}-c_2$, recover
+               $\mu$ from $u$
+        \end{description}
     \end{block}
 
-    \begin{block}{Goal}
+    \begin{block}{What if $R=\Z$, $q=2^{O(\poly(\lambda))}$}
         \begin{itemize}
-            \item Bring back language modelling in Bayesian language modelling    
+            \item   
             \item Improve cross domain language modelling with skipgrams
         \end{itemize}
     \end{block}
