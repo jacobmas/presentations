@@ -1,4 +1,4 @@
-\documentclass[11pt,t,xcolor=pdftex,svgnames]{beamer}
+\documentclass[11pt,t,xcolor=pdftex,svgnames,handout]{beamer}
 \mode<presentation> {\usetheme{NIST}}
 
 \usepackage{colortbl}
@@ -191,18 +191,18 @@ $\cdot$&5&&1&0&1\\
 \begin{itemize}
 \item<+-> Does $\wt(v \cdot w) \leq \wt(v) \cdot \wt(w)$ hold modulo $q$?
 \item<+->[\RedCross] For most $q$, no!
-\item<+-> Example: $q=2^{n}+1$
+\item<+-> Example: $q=2^{\pi}+1$
 \begin{itemize}
 \item<.-> $\wt(2 \bmod{q})$ = 1
-\item<.-> $\wt(2^{n} \bmod{q})$ = 1
-\item<.->[\RedCross] $\wt((2\cdot 2^{n}) = 2^{n}-1 \bmod{q})=n$ 
+\item<.-> $\wt(2^{\pi} \bmod{q})$ = 1
+\item<.->[\RedCross] $\wt((2\cdot 2^{\pi}) = 2^{\pi}-1 \bmod{q})=n$ 
 \end{itemize}
 \end{itemize} 
 \onslide<+->
 \begin{block}{Mersenne Numbers}
 \begin{itemize}
-\item<.->[\GreenCheck] $\wt$ relations do hold modulo $q=2^{n}-1$. 
-\item<+-> Reason: rep. of $2^{k}$ mod $q$  in $[0,2^{n}-1)$ is always
+\item<.->[\GreenCheck] $\wt$ relations do hold modulo $q=2^{\pi}-1$. 
+\item<+-> Reason: rep. of $2^{k}$ mod $q$  in $[0,2^{\pi}-1)$ is always
 $2^{\ell}$
 \item<.-> $v$ mod $q$ = summing $\wt(v)$ different $\wt(1)$
   numbers mod $q$
@@ -233,48 +233,135 @@ On input randommess $seed$
 \medskip
 \item<+-> Compute $b = s\cdot a + e \bmod{q}$. 
 \medskip
-\item<+-> Secret key is $sk=(s, seed)$, public key is $pk=(seed\_a, b)$
+\item<+-> Secret key is $sk=(seed,s,e)$, public key is $pk=(seed\_a, b)$
 \end{enumerate}
 \end{frame}
 
 \begin{frame}\frametitle{Ramstake Description -- Encapsulation}
 \onslide<+->
-On input $pk=(seed\_a,b)$, message $\mu$
+On input $pk=(a=\xof(seed\_a),b)$, message $\mu$
 \begin{enumerate}
-\item<+-> Expand message into necessary randomness $\vecr=xof(\mu)$.
-\begin{itemize}
+\item<+-> Use message for randomness via $\vecr=\xof(\mu)$ (a la Fujisaki-Okamoto)
 \smallskip
-\item<.-> Message used as randomness a la Fujisaki-Okamoto (no actual
-  CCA proof)
-
-\end{itemize}
-\item<+-> Recover $a$ from $seed\_a$
-\medskip
 \item<+-> Sample \alert{low-weight} $s', e' \in \Z_q$ (via $\vecr$)
-\medskip
+\smallskip
 \item<+-> Compute $c_1 = s'\cdot a + e' \bmod{q}$, $c_2 = s'\cdot b
   \bmod{q}$.
-\begin{itemize}
 \smallskip
-\item<+-> \alert{Note}: No extra noise added to $c_2$; attack possible
-  ????
-\end{itemize} 
-\medskip
-\item<+-> Compute $seedenc = \text{serialize}(c_2) \oplus
-  \text{encode}(\mu)$
-\medskip
+\item<+->  Compute $\mathbf{seedenc}$ and apply SNOTP (`snow-tipi`)  of $c_2$, $\mu$
+\smallskip
+\begin{itemize}
+\item<+-> $\text{encode}(\cdot)$ is a (255,32) Reed-Solomon Code over $\text{GF}(2^8)$
+\end{itemize}
+\begin{enumerate}
+\item<.-> Let $\mathbf{seedenc}$ be a  decomposition of $c_2$ into
+  $v$ $n$-byte segments
+\smallskip
+\item<+-> For $i \in v$, $\mathbf{seedenc}[i] :=
+  \mathbf{seedenc}[i] \oplus \text{encode}(\mu)$
+\smallskip
+
+\end{enumerate}
 \item<+-> Compute symmetric key $k=\text{H}(pk || r)$.
 \smallskip
-\item <+-> Output $ctxt = (c_1, seedenc, \text{H}(seed)), k$
+\item <+-> Output $ct = (c_1, \mathbf{seedenc}, h=\text{H}(\mu))$, encapsulated
+  key $k=\text{H}(pk || r)$
+\end{enumerate}
+\end{frame}
+
+\begin{frame}
+\frametitle{Ramstake Description - Decapsulation}
+\onslide<+->
+On input $ct=(c_1,\mathbf{seedenc}, h)$, $sk=(seed,s,e)$
+\begin{enumerate}
+\item<+-> Recover $a,b$ from $seed$.
+\smallskip
+\item<+-> Compute $c_2' = s\cdot c_1 \bmod{q}$
+\begin{itemize}
+\item<.->  Note, $c_2 = s\cdot s' \cdot a + s'\cdot e$,  $c_2'=s\cdot s'\cdot a + s\cdot e'$
+\end{itemize}
+\item<+-> Decode $\mathbf{seedenc}$ with the help of $c_2$:
+\begin{enumerate}
+\item<.-> Let $\mathbf{seedenc}'$ be a  decomposition of $c_2$ into
+  $v$ $n$-byte segments
+\smallskip
+\item<.-> Compute $\mathbf{str}= \mathbf{seedenc}' \oplus
+  \mathbf{seedenc}$
+\end{enumerate} 
+\item<+-> For each $i \in \ceil{\pi/n}$, let
+  $\mu=\text{decode}(\mathbf{str}[i])$, check if
+  $\text{H}(\mu) = h$ 
+\smallskip
+\begin{itemize}
+\item<.-> If false for all $i$, output $\bot$.
+\end{itemize}
+\item<+-> Let $ctxt', k = \text{Enc}(\mu, pk)$. 
+\begin{itemize}
+\item<.-> If $ctxt \neq ctxt'$, output $\bot$ (a la Fujisaki-Okamoto)
+\end{itemize}
+\item<+-> Output $k$.
 \end{enumerate}
 \end{frame}
 
 \begin{frame}\frametitle{Parameter Sizes}
-moo
+\onslide<+->
+\begin{center}
+\begin{table}
+\small
+\begin{tabular}{|c|c|c|}
+\hline
+$\pi$, $q=2^{\pi}-1$&216091&756839\\
+\hline
+Weights&64&128\\
+$v$&4&6\\
+\hline
+$|pk|$&26.41 kB&92.42 kB\\
+$|ct|$&27.41 kB&93.91 kB\\
+\hline
+Failure&$\leq 2^{-64}$&$\leq 2^{-64}$\\
+\hline
+security&IND-CCA&IND-CCA\\
+NIST level&1&5\\
+\hline
+$\text{KeyGen}$,ms&2.8&13.0\\
+$\text{Encaps}$,ms&5.4&24.1\\
+$\text{Decaps}$,ms&11.1&46.9\\
+\hline
+$\text{KeyGen}$,cycles&9445009&43148424\\
+$\text{Encaps}$,cycles&17700978&79342014\\
+$\text{Decaps}$,cycles&36706919&154721609\\
+\hline
+\end{tabular}
+\end{table}
+\end{center}
 \end{frame}
 
-\begin{frame}\frametitle{Attacks (Part 1)}
-moo
+\begin{frame}\frametitle{Best Attack (Beunardeau et al.)}
+\onslide<+->
+Recall, pk contains $(a,b=s\cdot a + e \bmod{2^{\pi}-1})$ where
+$s$, $e$ have low weight.
+\begin{enumerate}
+\item<+-> Partition $R=\{0,\ldots,\pi-1\}$ into some $k$ equal sized
+  subranges\\ \smallskip $R=R_{s}^{(0)} \sqcup \ldots \sqcup R_{s}^{(k-1)}$ and
+  $R=R_{e}^{(0)} \sqcup \ldots \sqcup R_{e}^{(k-1)}$, respectively. 
+\smallskip
+\item<+->  Set half of each of these subranges (in each of $R_s^{(i)},
+  R_{e}^{(i)}$) to \alert{inactive} uniformly at random.
+\smallskip
+\item<+-> Generate lattice basis $\matB$ for the lattice
+  s.t. $\veca^t\matB=\veczero^t$ where $\veca$ is as follows
+\begin{itemize}
+\item<.-> the first k/2 coefficient
+  are $2^{\min(R_{e}^{(i)}}$ for the k/2 subranges such that $R_{e}^{(i)}$
+  is \alert{active}
+\item<.-> the second k/2 coefficients are $a \cdot 2^{\min(R_{s}^{(i)}}$
+  for the k/2 subranges such that $R_{s}^{(i)}$ is \alert{active}.
+\item<.-> The final coefficient is $b$.
+\end{itemize}
+\item<+-> With probability $2^{-2w}$, the smallest vector in the
+  LLL-reduced $\matB$ will reveal the coefficients of $s,e$. 
+\smallskip
+\end{enumerate}
 \end{frame}
 
 
