@@ -244,9 +244,9 @@ On input $pk=(seed\_a,b)$, message $\mu$
 \item<+-> Expand message into necessary randomness $\vecr=xof(\mu)$.
 \begin{itemize}
 \smallskip
-\item<.-> Message used as randomness a la Fujisaki-Okamoto 
-\medskip
-\item<.-> Note: no actual CCA security proof 
+\item<.-> Message used as randomness a la Fujisaki-Okamoto (no actual
+  CCA proof)
+
 \end{itemize}
 \item<+-> Recover $a$ from $seed\_a$
 \medskip
@@ -255,11 +255,17 @@ On input $pk=(seed\_a,b)$, message $\mu$
 \item<+-> Compute $c_1 = s'\cdot a + e' \bmod{q}$, $c_2 = s'\cdot b
   \bmod{q}$.
 \begin{itemize}
+\smallskip
 \item<+-> \alert{Note}: No extra noise added to $c_2$; attack possible
   ????
 \end{itemize} 
 \medskip
-\item<+-> Secret key is $(s)$, public key is $(seed\_a, b)$
+\item<+-> Compute $seedenc = \text{serialize}(c_2) \oplus
+  \text{encode}(\mu)$
+\medskip
+\item<+-> Compute symmetric key $k=\text{H}(pk || r)$.
+\smallskip
+\item <+-> Output $ctxt = (c_1, seedenc, \text{H}(seed)), k$
 \end{enumerate}
 \end{frame}
 
