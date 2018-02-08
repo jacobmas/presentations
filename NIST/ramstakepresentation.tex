@@ -1,4 +1,4 @@
-\documentclass[11pt,t]{beamer}
+\documentclass[11pt,t,xcolor=pdftex,svgnames]{beamer}
 \mode<presentation> {\usetheme{NIST}}
 
 \usepackage{colortbl}
@@ -73,9 +73,11 @@
 }
 \makeatother
 
-\newcommand{\Red}[1]{{\textcolor{red} #1}}
+\newcommand{\Red}[1]{{\color{Red}#1}}
+\newcommand{\xof}{\ensuremath{\text{xof}}}
 
 \input{beamhead}
+\input{../head}
 
 \begin{document}
 
@@ -133,10 +135,10 @@
             \item[Enc$(\mu)$:] 
 \begin{itemize}
   \item Sample \alert{short} (Euclidean norm)
-              $\Red{r},\Red{e}_1, \Red{e}_2$.
+              $\Red{r},\Red{e_1}, \Red{e_2}$.
             \item Output  
-              $c=(a\cdot \Red{r}+\Red{e}_1, b\cdot
-              \Red{r}+\Red{e}_2+(q/2)\mu)$
+              $c=(a\cdot \Red{r}+\Red{e_1}, b\cdot
+              \Red{r}+\Red{e_2}+(q/2)\mu)$
 \end{itemize}
              \item[Dec$(c)$:] Compute $u=c_1\Red{s}-c_2$, recover
                $\mu$ from $u$
@@ -146,7 +148,7 @@
     \onslide<2->
     \begin{block}{What if Ring is the Integers?}
         \begin{itemize}
-          \item Modulus clearly needs be $q=2^{Omega(\poly(n)}}$ to avoid
+          \item Modulus clearly needs be $q=2^{\Omega(\text{poly}(n))}$ to avoid
           trivial brute-force
             \item[\RedCross]  Easy to break with LLL if \alert{short} =
               Euclidean norms
@@ -156,28 +158,110 @@
 \end{frame}
 
 \begin{frame}    
-    \frametitle{Hamming Weights and Mersenne Primes
-\begin{block}{Hamming Weights}
-\item Brief reminder: Hamming weight of a vector is number of non-zero
+    \frametitle{Binary Hamming Weights}
+\begin{itemize}
+\item<.-> Hamming weight $\wt(\vecv)$is number of non-zero
   elements
+\smallskip
+\item<.-> View integer $v$ in $\Z$ as an (infinite length) bit-vector
+\smallskip
+\item<+-> $\wt(v + w) \leq \wt(v)+\wt(w)$.
+\smallskip
+\item<.-> $\wt(v \cdot w ) \leq \wt(v) \cdot \wt(w)$
+\end{itemize}
+\onslide<+->
+\begin{block}{(Tight) Example}
+\begin{table}
+\begin{tabular}{cr|cccc}
+&3&&&1&1\\
+$\cdot$&5&&1&0&1\\
+\hline
+&15&1&1&1&1\\
+\end{tabular}
+\end{table}
 \end{block}
-\begin{block}{Mersenne Primes}
-\item Natural representation: modulo Mersenne numbers.
-\item Need prime to avoid decomposition attacks???
-\item[\RedCross] Very limited choice of moduli
+\begin{itemize}
+\item<+-> Important: $\wt(v \cdot w ) \leq \wt(v) \cdot
+  \wt(w)$ holds \alert{over the integers}
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Mersenne Primes}
+\begin{itemize}
+\item<+-> Does $\wt(v \cdot w) \leq \wt(v) \cdot \wt(w)$ hold modulo $q$?
+\item<+->[\RedCross] For most $q$, no!
+\item<+-> Example: $q=2^{n}+1$
+\begin{itemize}
+\item<.-> $\wt(2 \bmod{q})$ = 1
+\item<.-> $\wt(2^{n} \bmod{q})$ = 1
+\item<.->[\RedCross] $\wt((2\cdot 2^{n}) = 2^{n}-1 \bmod{q})=n$ 
+\end{itemize}
+\end{itemize} 
+\onslide<+->
+\begin{block}{Mersenne Numbers}
+\begin{itemize}
+\item<.->[\GreenCheck] $\wt$ relations do hold modulo $q=2^{n}-1$. 
+\item<+-> Reason: rep. of $2^{k}$ mod $q$  in $[0,2^{n}-1)$ is always
+$2^{\ell}$
+\item<.-> $v$ mod $q$ = summing $\wt(v)$ different $\wt(1)$
+  numbers mod $q$
+\item<+->  $q$ needs to be a \alert{Mersenne Prime} to avoid
+  decomposition attacks.
+\item[\RedCross]<.-> For desired parameters, Ramstake limited to $n=216091,756839$
+\end{itemize}
 \end{block}
 \end{frame}
 
-\begin{frame}\frametitle{Ramstake Description}
+\begin{frame}\frametitle{Ramstake Description -- KeyGen}
+\onslide<+->
+On input randommess $seed$
+\begin{enumerate}
+\item<+-> Expand $seed$ into necessary randomness via $\vecr \gets
+  \xof(seed)$
+\begin{itemize}
+\smallskip
+\item<.-> Reason for $\text{xof}$: to
+  shorten keys (a la Kyber/NewHope/Frodo)
+\smallskip
+\end{itemize}
+\item<+-> Sample random $seed\_a$ (via $\vecr$)
+\medskip
+\item<+-> Choose $a \gets \Z_q$ randomly via $\text{xof}(seed\_a)$ 
+\medskip
+\item<+-> Choose \alert{low-weight} $s, e \in \Z_q$ (via $\vecr$)
+\medskip
+\item<+-> Compute $b = s\cdot a + e \bmod{q}$. 
+\medskip
+\item<+-> Secret key is $sk=(s, seed)$, public key is $pk=(seed\_a, b)$
+\end{enumerate}
+\end{frame}
 
-yadda yadda go a bit into the reconciliation method
+\begin{frame}\frametitle{Ramstake Description -- Encapsulation}
+\onslide<+->
+On input $pk=(seed\_a,b)$, message $\mu$
+\begin{enumerate}
+\item<+-> Compute $r=xof(\mu)$.
+\begin{itemize}
+\item<.-> $r$ will be used both to sample 
+\medskip
+\item<.-> Reason for $\text{xof}$: to
+  shorten public key (a la Kyber/NewHope/Frodo)
+\end{itemize}
+\medskip
+\item<+-> Choose \alert{low-weight} $s, e \in \Z_q$
+\medskip
+\item<+-> Compute $b = s\cdot a + e \bmod{q}$. 
+\medskip
+\item<+-> Secret key is $(s)$, public key is $(seed\_a, b)$
+\end{enumerate}
 \end{frame}
 
 \begin{frame}\frametitle{Parameter Sizes}
+moo
 \end{frame}
 
 \begin{frame}\frametitle{Attacks (Part 1)}
-
+moo
 \end{frame}
 
 
