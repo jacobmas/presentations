@@ -1,0 +1,158 @@
+\begin{frame}{KDM Security for Dual-Style Lattice-Based Scheme}
+
+   \begin{itemize}
+   \item<+-> Scheme from \inlinecite{ACPS'09} is ``primal-style''
+     following \inlinecite{Reg'05}
+     \begin{itemize}
+     \item<.-> \alert{Pseudorandom} public key, \alert{unique} secret
+       key. \smallskip
+     \item<.-> Has relatively simple KDM-security proof \smallskip
+     \item<.-> Unique key seems to make creating IBE difficult
+     \end{itemize}
+   \item<+->  IBE schemes \inlinecite{CHKP'10, ABB'10}
+     based on ``dual-style'' \inlinecite{GPV'08}
+     \begin{itemize}
+     \item<.-> \alert{Statistically uniform} public key, \alert{many} \smallskip
+       secret keys.
+     \item<.-> Makes IBE easy
+     \end{itemize}
+   \item<+-> We base scheme on \inlinecite{GPV'08} with tweaks from \inlinecite{ACPS'09, LP'11}
+   \end{itemize}
+\end{frame}
+
+\begin{frame}{Dual-Style Lattice Based Encryption Scheme}
+   \begin{block}<+->{Dual-Style Scheme (mod $q=p^2$)}
+     \jnote{clean cite GPV, with LP mods}
+     \begin{description}
+     \item[Gen($1^{n}$)] $\mathsf{pk}=(\unif{\matA},
+       \vecy)$, $\mathsf{sk}=(\short{\vecz_1})$,  such that 
+       $\unif{\matA}\short{\vecz_{1}}+\vecy=\short{\text{short}}$.
+     \item[$\text{Enc}(\mathsf{pk}, \mu)$] message $\mu \in \Z_{p}$, outputs
+       ciphertext \smallskip \\{\centering $\vecc^{t} =
+         \short{\vecx_0^{t}}[\unif{\matA} \mid \vecy] +
+         [\short{\vecx_1^{t}} \mid \short{x'}]+[\veczero \mid p \cdot
+         \mu]$\\} \smallskip
+     \item[$\text{Dec}(\mathsf{sk}, \vecc)$] computes
+       $\inner{\vecc, (\short{\vecz_1}, 1)}\approx p\mu$, outputs $\mu$
+    \end{description}
+   \end{block}
+   \begin{itemize}
+     \item<+-> Simple proof of semantic security
+       \begin{enumerate}
+      \item<.-> Use LWE to make public key uniform
+      \item<.-> Use LWE again to make ciphertext uniform
+       \end{enumerate}
+      \item<+-> If messages are key-dependent, this no longer works
+   \end{itemize} 
+ \end{frame}
+
+\begin{frame}{KDM Security Proof}
+  \begin{block}{Encryption of key-dependent message $\inner{\vecv,
+        \vecz_1}$}
+        
+        \begin{overlayarea}{\textwidth}{2cm}
+         \onslide*<1|handout:0>{\centering $\vecc^{t} =
+           \short{\vecx_0^{t}}[\unif{\matA} \mid \vecy] +
+           [\short{\vecx_1^{t}} \mid \short{x'}]+[\veczero \mid p\cdot
+           \inner{\vecv, \short{\vecz_{1}}}]$\\}
+    \onslide*<2|handout:0>{\centering $\vecc^{t} = [\vecb^{t} \mid
+      -\inner{\vecb,\short{\vecz_1}}+\inner{\short{\vecx},
+        \short{\vecz}}+\short{x'} + p\cdot\inner{\vecv,
+        \short{\vecz_1}}]$\\ }
+            \onslide*<3-4|handout:0>{\centering $\vecc^{t} = [\unif{\vecb^{t}} \mid
+      -\inner{\unif{\vecb},\short{\vecz_1}}+\inner{\short{\vecx},
+        \short{\vecz}}+\short{x'} + p\cdot\inner{\vecv,
+        \short{\vecz_1}}]$\\ }
+                    \onslide*<5|handout:0>{\centering $\vecc^{t} = [\unif{\vecb^{t}} +\short{\vecx_0^{t}}\unif{\matA}+\short{\vecx_1^{t}}+p \cdot \vecv^t \mid
+      \underbrace{(-\inner{\unif{\vecb},\short{\vecz_1}}+\short{x'})}_{\text{from \mylwe}}+\inner{\short{\vecx_0}, \vecy}]$\\ }
+  \onslide*<6|handout:0>{\centering $\vecc^{t} = [\unif{\vecb^{t}} +\short{\vecx_0^{t}}\unif{\matA}+\short{\vecx_1^{t}}+ p \cdot \vecv^t \mid
+      \unif{\text{uniform}}+\inner{\short{\vecx_0}, \unif{\vecy}}]$\\ }
+
+    \smallskip
+    
+ 
+    % \onslide+<7->{\smallskip $x$ \\}
+    
+    \onslide*<1-4|handout: 0>{$\vecy=\short{\vecz_{0}}-\unif{\matA}\short{\vecz_{1}}$}\onslide*<2-4|handout: 0>{,}
+    \onslide*<2|handout:
+    0>{$\vecb^{t}=\short{\vecx_0^{t}}\unif{\matA}+\short{\vecx_1^{t}}$,
+      $\short{\vecx}=(\short{\vecx_0}, \short{\vecx_1}),
+    \short{\vecz}=(\short{\vecz_0}, \short{\vecz_1})$}
+    \onslide*<3-4|handout: 0>{$\unif{\vecb^{t}}=\unif{\text{uniform}}$,
+    $\short{\vecx}=(\short{\vecx_0}, \short{\vecx_1}),
+    \short{\vecz}=(\short{\vecz_0}, \short{\vecz_1})$}
+        \onslide*<5|handout: 0>{$\unif{\vecb^{t}}=\unif{\text{uniform}}$,
+        $\vecy=\underbrace{\short{\vecz_0}-\unif{\matA}\short{\vecz_{1}}}_{\text{from \mylwe}}$}
+        \onslide*<6|handout: 0>{$\unif{\vecb^{t}}=\unif{\text{uniform}}$,
+        $\unif{\vecy}=\unif{\text{uniform}}$}
+    % \onslide*<5|handout:0>{$\unif{\vecb^{t}}=\unif{\text{uniform}}$,
+    %     $\unif{\vecy}=\text{uniform}$}
+      \end{overlayarea}
+  \end{block}
+  \smallskip
+    \begin{enumerate}
+    \item<1-> Normal encryptions
+    \item<2-> Express ciphertext relative to $\mathsf{\sk}=\short{\vecz_{1}}$ (distribution remains identical)
+    \item<3->  Make $\vecb$ uniform using $\mylwe$
+    \end{enumerate}
+      \begin{itemize}
+        \item<4-> We want to make the ciphertext less dependent on the
+          secret key $\short{\vecz_1}$.
+        \item<4-> Adding
+          $(\short{\vecx_0^t}\unif{\matA}+\short{\vecx_1}+p\cdot
+          \vecv^t)$ to left side mostly removes key dependent parts from
+          right side.
+      \end{itemize}
+     \begin{enumerate}
+       \setcounter{enumi}{3}
+    \item<5-> Apply this statistically ind. shift, removing key dependence (as in~\inlinecite{ACPS '09})
+    \item <6-> Make ciphertext uniform using $\mylwe$
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{KDM Security Proof--Problem}
+  \begin{block}{Encryption of key-dependent message $\inner{\vecv,
+        \vecz_1}$}
+        
+        \begin{overlayarea}{\textwidth}{2cm}
+     
+\onslide*<1-|handout:1>{\centering $\vecc^{t} = [\vecb^{t} \mid
+      -\inner{\vecb,\short{\vecz_1}}+\underbrace{\inner{\short{\vecx},
+        \short{\vecz}}}_{\text{\scriptsize leakage}}+\short{x'} + p\cdot\inner{\vecv,
+        \short{\vecz_1}}]$\\ }
+    \smallskip
+
+    \onslide*<1-|handout:0>{$\vecb^{t}=\short{\vecx_0^{t}}\unif{\matA}+\short{\vecx_1^{t}}$,
+      $\short{\vecx}=(\short{\vecx_0}, \short{\vecx_1}),
+    \short{\vecz}=(\short{\vecz_0}, \short{\vecz_1})$}
+      \end{overlayarea}
+  \end{block}
+  \smallskip
+  \begin{itemize}
+  \item<1-> \alert{PROBLEM}: can't make $\vecb$ uniform.
+    \begin{itemize}
+    \item<.->
+    $\mylwe$ error $\short{\vecx}$ partly leaked via $\inner{\short{\vecx},
+      \short{\vecz}}$
+    \end{itemize}
+  \item<2-> Old technique \inlinecite{GKPV'10, DGK+'10,OPW'11}:
+    ``flood'' the leakage.
+    \begin{itemize}
+    \item<2-> Choose $\short{\vecx'}$ from super-wide distribution 
+      \item<2-> This makes
+      $\short{\vecx'} \statind \short{\vecx'}+\inner{\short{\vecx},
+        \short{\vecz}}$, hiding leakage
+%    \item Thus, simulator does not need to know $\vecx$, can apply
+%      $\mylwe$\jnote{fix what ciphertext looks like}
+    \item<2-> Downside: Much larger params $(q, 1/\alpha)$, stronger hardness
+      assumptions
+    \end{itemize}
+  \item<3-> Alternative: receive $(\short{\vecz}, \inner{\short{\vecx},
+      \short{\vecz}})$ as extra info in $\mylwe$ challenge.
+  \item<4->\textit{Is} $\mylwe$ \textit{still hard with this extra info?}
+  \end{itemize}
+\end{frame}
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "slides"
+%%% End: 

@@ -1,0 +1,121 @@
+\begin{frame}{Extended LWE}
+  \begin{itemize}
+  \item<+-> Introduced in \inlinecite{OPW'11} as
+    simplifying tool for security proofs where information about
+    secret key is leaked.
+  \end{itemize}
+  \begin{block}<+->{Definition}
+    
+    Given: \\\smallskip {\centering
+      $(\overbrace{\unif{\matA}, \vecb}^{\mylwe},\quad \overbrace{\text{
+          short }\short{\vecz}, b' = \inner{\short{\vecx},
+          \short{\vecz}}+\short{\tilde{x}}}^{\text{``hint"}})$\\}
+    \medskip
+    
+    Distinguish
+    $\vecb^t=\short{\vecx_0^{t}}\unif{\matA}+\short{\vecx_1^{t}}$ from
+    $\unif{\vecb}$ uniform
+    (and $\mylwe$ error $\short{\vecx}$)\\
+  \end{block}
+  \begin{itemize}
+  \item<+-> Previously: equivalent to standard $\mylwe$ when
+    $\short{\tilde{x}}$ is superpolynomial.
+  \item<+-> We show equivalence to standard $\mylwe$
+    \begin{itemize}
+    \item<.-> With \alert{no extra noise} ($\short{\tilde{x}}=0$) and
+      \alert{no loss in parameters} $(q, 1/\alpha)$
+    \end{itemize}
+    % \item For $\beta \in \poly(n)$, can attack generalization of
+    %   extended LWE with \alert{unbounded} (polynomial) number of
+    %   ``hints"
+ \item<+-> Recent work ~\inlinecite{BLPRS '13}: allows negligible loss
+   in advantage, but loses slightly in dimension, $1/\alpha$ error parameter
+  \end{itemize}
+\end{frame}
+
+%\begin{frame}{Extended $\mylwe$--Parameter Discussion}
+%\begin{itemize}
+%\item The previous results reduced it to $\mylwe$ by ``swamping'' the 
+%hint term. 
+%\begin{itemize}
+%\item ``Hint'' noise term made superpolynomially large. 
+%\item Statistically hides the ``hint,'' making simple reduction to 
+%standard $\mylwe$. 
+%\end{itemize}
+%\item Attack on unbounded hint version
+%\end{itemize}
+%\end{frame}
+
+
+% Note that the STOC paper has a result that essentially subsumes
+% ours, though it does require a slight increase in the error
+\begin{frame}{Hardness of Extended LWE}
+\begin{itemize}
+\item<+-> Proof uses ``knapsack'' form of LWE
+  \begin{itemize}
+  \item<.-> Given: $\unif{\matH} \in \Z_q^{(m-n)\times m}$, $\vecc \in
+    \Z_q^{(m-n)}$, LWE distribution $\chi$
+\smallskip
+  \item<.-> Distinguish: $\vecc=\unif{\matH}\short{\vecx}$ (with $\short{\vecx}\gets \chi^{m}$) from $\vecc$ uniform.
+
+     
+
+  \end{itemize}
+\item<+-> Equivalent to regular $\mylwe$ (also true for extended form),~\inlinecite{MM'11}
+ \item<+-> Reduction idea
+   \begin{itemize} 
+    \item<.-> If error small enough, can guess ``hint'' with
+      non-negligible probability
+\smallskip
+    \item<.-> Use ``hint'' to re-randomize LWE instance
+\end{itemize}
+  \item<+-> Uses full power of Impagliazzo-Naor \inlinecite{IN '89}
+    technique for
+    subset sum
+    \item<.-> Drawback: with $p$ smallest divisor of modulus $q$, hint must be smaller than $p$. 
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Hardness of Extended LWE: Analysis}
+\begin{block}<+->{Reduction from $\mylwe$ (Knapsack form)}
+   Given: Knapsack $\mylwe$ instance  {\centering
+      $(\unif{\matH},\vecc)$} 
+    \begin{itemize}
+      \item Sample short $\short{\vecz}$, $\short{\vecx'} \gets \chi^m$, uniform $\unif{\vecv} \gets \Z_q^{m-n}$
+      \item Let $\matH' := \unif{\matH} - \vecv\short{\vecz}^t,\quad \vecc' := \vecc - \vecv \cdot \inner{\vecz, \vecx'}$
+      \item Send $(\matH', \vecc', \vecz, \inner{\vecx',\vecz})$ to ext-LWE adversary $\Adv$, output $\Adv$'s output
+    \end{itemize}
+\end{block}
+  \begin{itemize}
+  \item<+-> \textsf{Case:} $(\unif{\matH}, \vecc)$ uniform and independent
+    \begin{itemize}
+      \item<+-> So are $\matH', \vecc'$
+\end{itemize}
+   \item<+-> Case: $(\unif{\matH}$, $\vecc=\unif{\matH}\short{\vecx})$ with $\short{\vecx} \gets \chi^{m}$
+\begin{itemize}
+\item<+-> $\matH'$ still uniform, $\vecc' = \matH'\short{\vecx} + \vecv \cdot \inner{\vecz,\short{\vecx}-\short{\vecx'}}$
+\item<+-> Case: $\inner{\short{\vecx'},\short{\vecz}}=\inner{\short{\vecx},\short{\vecz}}$
+\begin{itemize}
+\item<.-> $\vecc'=\matH'\short{\vecx}$
+\end{itemize}
+\item<+-> Case: $\inner{\vecz,\short{\vecx}-\short{\vecx'}}$ a unit
+\begin{itemize}
+\item<.-> $\vecc'$ uniform over choice of $\vecv$
+\end{itemize}
+\item<+-> Recall condition that $\inner{\vecx,\vecz} < p$ with overwhelming probability
+\begin{itemize}
+\item<.-> One of cases must hold, with prob $\frac{1}{2p-1}$ we have $\inner{\short{\vecx'},\short{\vecz}}=\inner{\short{\vecx},\short{\vecz}}$
+\end{itemize}
+  
+\end{itemize}
+
+
+
+  \end{itemize}
+\end{frame}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "slides"
+%%% End: 

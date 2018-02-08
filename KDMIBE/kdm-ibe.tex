@@ -1,0 +1,91 @@
+\newif\iflncs\lncsfalse
+
+\documentclass[letterpaper,11pt]{article}
+\usepackage{times}
+\usepackage{fullpage}
+\usepackage{hyperref,microtype,pdfsync}
+\usepackage{amsmath,amsfonts,amssymb,amsthm}
+%\usepackage[amsmath,amsthm,thmmarks,hyperref]{ntheorem}
+\usepackage{url}
+\usepackage{algorithm,algorithmic}
+\usepackage{enumitem}
+\usepackage{xspace}
+\usepackage{color}
+\usepackage{enumitem}
+
+
+\input{head}
+
+\input{paperonlycommands}
+
+% MARGIN NOTES
+
+%\newif\ifnotes\notestrue
+\newif\ifnotes\notesfalse
+
+\ifnotes
+\newcommand{\jnote}[1]{{\bf (\color{red}{Jacob:}} {#1}{\bf ) }}
+\newcommand{\cnote}[1]{{\bf (\color{blue}{Chris:}} {#1}{\bf ) }}
+\else
+\newcommand{\jnote}[1]{}
+\newcommand{\cnote}[1]{}
+\fi
+
+%%%%
+
+\title{Circular and KDM Security for Identity-Based Encryption}
+
+\author{%
+  Jacob Alperin-Sheriff\footnote{School of Computer Science, College of
+    Computing, Georgia Institute of Technology. Email: \texttt{jmas6@cc.gatech.edu}}
+  %
+  \and Chris Peikert\footnote{School of Computer Science, Georgia
+    Institute of Technology.  Email: \texttt{cpeikert@cc.gatech.edu}.
+    This material is based upon work supported by the National Science
+    Foundation under Grant~CNS-0716786 and CAREER Award~CCF-1054495,
+    and by the Alfred P.~Sloan Foundation.  Any opinions, findings,
+    and conclusions or recommendations expressed in this material are
+    those of the authors and do not necessarily reflect the views of
+    the National Science Foundation or the Sloan Foundation.}
+  %
+}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  \ifnotes \begin{center}{\Huge{WARNING: NOTES ARE ON}}\end{center} \fi
+  \input{abstract}
+\end{abstract}
+
+\cnote{Be sure to cite Herranz-Galindo-Villar, in related work?}
+
+\input{intro}
+
+\input{prelims}
+
+\input{extendedLWE}
+
+\input{kdmcpa}
+
+\input{tools}
+
+\input{construction}
+
+\paragraph{Acknowledgments.}
+
+We thank Oded Regev for helpful comments, and for pointing out a
+subtle error in a prior version of our reduction from
+Section~\ref{sec:extended-lwe}.
+
+\bibliographystyle{alphaabbrvprelim}
+\bibliography{lattices,crypto,ibe}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

@@ -1,0 +1,241 @@
+% hack to deal with beamer/pgf bug
+\RequirePackage{atbegshi}
+
+% "draft" makes compilation faster; remove for final version
+% shadow = put drop shadows behind blocks by default
+% xcolor: svgnames imports lots of color names
+% table allows for multi-color table rows
+% pdftex is the compiler
+\documentclass[shadow,xcolor=pdftex,svgnames,table,t]{beamer}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+% need to load tikz defs before beamer defs, for some reason
+\input{tikzhead}
+\input{beamhead}
+
+% common stuff
+\input{../latthead}
+\input{../vecmathead}
+\input{../lrhead}
+\input{../bbhead}
+% trace
+\DeclareMathOperator{\trace}{Tr}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\msb}{msb}
+\renewcommand{\O}{\mathcal{O}}
+\newcommand{\frakp}{\mathfrak{p}}
+
+% fix weird spacing of \pmod, and introduce \pmod* command; see
+% http://tex.stackexchange.com/questions/39221/removing-extra-space-with-pmod-command
+\makeatletter
+\renewcommand{\pod}[1]{\mathchoice
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\mkern4mu(#1)}
+  {\mkern4mu(#1)}
+}
+\makeatletter
+\let\@@pmod\pmod
+\DeclareRobustCommand{\pmod}{\@ifstar\@pmods\@@pmod}
+\def\@pmods#1{\mkern4mu({\operator@font mod}\mkern 6mu#1)}
+\makeatother
+%%%% 
+
+\title
+{ Faster Bootstrapping with Polynomial Error
+}
+
+\author
+{ {\Large Jacob Alperin-Sheriff}
+  \and
+  {\Large Chris Peikert}
+}
+
+\institute{School of Computer Science\\Georgia Tech}
+
+\date
+{
+TBD
+}
+
+% restricts presentation to specified frames, for faster compilation;
+% comment out the line to get the entire presentation
+
+%\includeonlyframes{fhe,bootstrapping,results,unpacked-main}
+
+\begin{document}
+
+\begin{frame}[label=title]
+  \titlepage
+\end{frame}
+
+\begin{frame}[label=fhe]{Fully Homomorphic Encryption {\footnotesize
+      [RAD'78,Gen'09]}}
+  \begin{itemize}
+  \item<+-> FHE lets you do this:
+    \begin{center}
+      \begin{tikzpicture}
+        \node (c) {$\color{Green}\fbox{$\mu$}$};
+        \node[right=of c,algorithm=Green] (eval)
+        {$\text{Eval}\parens*{f\;,\; {\color{Green} \fbox{$\mu$}}}$};
+        \node[right=of eval] (out) {$\color{Green} \fbox{$f(\mu)$}$};
+
+        \path
+        (c) edge (eval)
+        (eval) edge (out)
+        ;
+      \end{tikzpicture}
+    \end{center}
+    where $\abs{f(\mu)}$ and decryption time don't depend on
+    $\abs{f}$.
+
+    \medskip
+    A cryptographic ``holy grail'' with tons of applications.
+  \end{itemize}
+
+  \onslide<+->
+  \bigskip
+  \begin{itemize}
+  \item Naturally occurring schemes are ``somewhat
+    homomorphic''~(SHE): they can only evaluate functions of an
+    \alert<.>{\textit{a priori} bounded} depth.
+  \end{itemize}
+
+  \begin{center}
+    \begin{tikzpicture}[node distance=.4cm]
+      \node (c) {$\color{Green}\fbox{$\mu$}$};
+      
+      \node[right=of c,algorithm=Green] (eval)
+      {$\text{Eval}\parens*{f, {\color{Green} \fbox{$\mu$}}}$};
+      
+      \node[right=of eval] (cprime) {$\color{Orange} \fbox{$f(\mu)$}$};
+
+      \node[right=of cprime,algorithm=Green] (eval2)
+      {$\text{Eval}\parens*{g, {\color{Orange} \fbox{$f(\mu)$}}}$};
+
+      \node[right=of eval2] (cdp) {$\color{Red} \fbox{$g(f(\mu))$}$};
+
+      \path
+      (c) edge (eval)
+      (eval) edge (cprime)
+      (cprime) edge (eval2)
+      (eval2) edge (cdp)
+      ;
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}[label=bootstrapping]{Bootstrapping: SHE $\to$ FHE {\footnotesize [Gen'09]}}
+  \begin{itemize}
+  \item<+-> \alert<.>{Homomorphically evaluates the SHE decryption
+      function} to ``refresh'' a ciphertext ${\color{Red}
+      \fbox{$\mu$}}$, allowing further homomorphic operations.
+
+    \begin{center}
+      \begin{tikzpicture}[every node/.style={node distance=.7cm}]
+        \node (sk)
+        {${\color{Green} \fbox{$sk$}}$};
+
+        \node[right=of sk,algorithm=Green] (eval)
+        {$\text{Eval}\parens*{\; f(x) =
+            \text{Dec}_{x}({\color{Red}\fbox{$\mu$}})\; ,\;
+            {\color{Green} \fbox{$sk$}} \;}$};
+
+        \node[right=of eval] (out)
+        {${\color{Orange} \fbox{$\mu$}}$};
+
+        \path
+        (sk) edge (eval)
+        (eval) edge (out)
+        ;
+
+      \end{tikzpicture}
+    \end{center}
+
+    \onslide<+->
+    \begin{itemize}
+    \item The only known way of obtaining \alert<.>{unbounded} FHE.
+
+      \medskip
+    \item \alert<.>{Goal}: Efficiency!  Minimize depth $d$ and
+      size $s$ of decryption ``circuit.''
+
+      \medskip
+    \item Best SHEs {\footnotesize [BGV'12]} can evaluate in time
+      $\tilde{O}(d \cdot s \cdot \lambda)$.
+    \end{itemize}
+
+    \smallskip
+
+  \item<+-> Intensive study, many techniques {\footnotesize
+      [G'09,GH'11a,GH'11b,GHS'12b]}, but
+
+    \alert<.>{still very inefficient} -- the main bottleneck in FHE,
+    by far.
+
+    \medskip 
+  
+  \item<+-> The asymptotically most efficient methods on ``packed''
+    ciphertexts {\footnotesize [GHS'12a,GHS'12b]} are very complex,
+    and appear practically worse than asymptotically slower methods.
+
+    % (No public implementation of sub-quadratic methods.)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=great]{Milestones in Bootstrapping}
+  \begin{description}
+  \item<+->[[Gen'09{]}:] $\tilde{O}(\lambda^{4})$ runtime
+
+    \medskip
+  \item<+->[[BGV'12{]}:] $\tilde{O}(\lambda^{2})$ runtime, or
+    $\tilde{O}(\lambda)$ amortized over $\lambda$ ciphertexts
+
+    \onslide<+->
+    \medskip
+    Mainly via improved SHE homomorphic capacity.
+
+    \medskip Amortized method requires ``exotic'' plaintext rings,
+    emulating $\Z_{2}$ arithmetic in $\Z_{p}$.
+
+    \medskip 
+  \item<+->[[GHS'12b{]}:] $\tilde{O}(\lambda)$ runtime, for ``packed''
+    plaintexts.  \alert<.>{Declare victory?}
+  \end{description}
+  %
+  \onslide<+->
+  \begin{center}
+    \begin{tikzpicture}
+      \matrix[algorithm=Green] (Dec) {
+        \node {Dec circuit}; \\
+        \node[algorithm=Purple] (modPhi) {${} \bmod \Phi_{m}(X)$}; \\
+      };
+
+      \node[algorithm=Black,right=of Dec,align=center] (compiler)
+      {[GHS'12a]\\compiler};
+
+      \node[algorithm=Red,right=of compiler,align=center] (boot)
+      {Bootstrapping\\Procedure};
+
+      \path
+      (Dec) edge (compiler)
+      (compiler) edge (boot)
+      ;
+    \end{tikzpicture}
+  \end{center}
+  %
+  \begin{itemize}
+  \item<+->[\RedCross] Log-depth mod-$\Phi_{m}(X)$ circuit is
+    \alert<.>{complex}, w/large hidden constants.
+  \item<+->[\RedCross\RedCross] {\footnotesize [GHS'12a]} compiler is
+    \alert{very complex}, w/\alert{large polylog overhead} factor.
+  \end{itemize}
+\end{frame}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

@@ -1,0 +1,699 @@
+% hack to deal with beamer/pgf bug
+\RequirePackage{atbegshi}
+
+% "draft" makes compilation faster; remove for final version
+% shadow = put drop shadows behind blocks by default
+% xcolor: svgnames imports lots of color names
+% table allows for multi-color table rows
+% pdftex is the compiler
+\documentclass[shadow,xcolor=pdftex,svgnames,table,t]{beamer}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{array}
+
+\newif\iflncs\lncstrue
+% need to load tikz defs before beamer defs, for some reason
+\input{tikzhead}
+\input{beamhead}
+
+% common stuff
+\input{../crypthead}
+\input{../latthead}
+\input{../vecmathead}
+\input{../lrhead}
+\input{../bbhead}
+\input{../noteshead}
+\input{../comphead}
+\input{../mathabxhead}
+% trace
+\DeclareMathOperator{\trace}{Tr}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\msb}{msb}
+\renewcommand{\O}{\mathcal{O}}
+\newcommand{\frakp}{\mathfrak{p}}
+\newcommand{\Blue}[1]{{\color{Blue}#1}}
+\newcommand{\Red}[1]{{\color{Red}#1}}
+\newcommand{\Purple}[1]{{\color{Purple}#1}}
+\newcommand{\Green}[1]{{\color{Green}#1}}
+%\newcommand{\poly}{\text{poly}}
+
+% fix weird spacing of \pmod, and introduce \pmod* command; see
+% http://tex.stackexchange.com/questions/39221/removing-extra-space-with-pmod-command
+\makeatletter
+\renewcommand{\pod}[1]{\mathchoice
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\mkern4mu(#1)}
+  {\mkern4mu(#1)}
+}
+\makeatletter
+\let\@@pmod\pmod
+\DeclareRobustCommand{\pmod}{\@ifstar\@pmods\@@pmod}
+\def\@pmods#1{\mkern4mu({\operator@font mod}\mkern 6mu#1)}
+\makeatother
+%%%% 
+
+\title
+{ Short Signatures with Short Public Keys\\From Homomorphic Trapdoor Functions
+}
+
+\author
+{ {\Large Jacob Alperin-Sheriff}
+}
+
+\institute{School of Computer Science\\Georgia Tech}
+
+\date
+{
+
+}
+
+% restricts presentation to specified frames, for faster compilation;
+% comment out the line to get the entire presentation
+
+%\includeonlyframes{tags,compg}
+%\includeonlyframes{PHTDFtoSigs,Reduction}%PHTDF,OurPHTDF,PHTDFtoSigs}
+
+\begin{document}
+
+%%% put less vertical space around displayed equations
+\setlength{\abovedisplayskip}{8pt plus 2pt minus 1pt}
+\setlength{\belowdisplayskip}{8pt plus 2pt minus 0pt}
+\setlength{\abovedisplayshortskip}{0pt plus 2pt}
+\setlength{\belowdisplayshortskip}{8pt plus 2pt minus 1pt}
+
+\begin{frame}[label=title]
+  \titlepage
+\end{frame}
+
+\begin{frame}[label=stateless]{Stateless Standard-Model Signature Schemes}
+\medskip
+\begin{tikzpicture}
+\node  (sign) at (1,1) [draw] {\textbf{Sign}};
+\node (msg) [left=of sign] {\citationsize Message }; 
+\node (sk) [above=4mm of sign] {\citationsize Signing Key };
+\node (ver) [right=4cm of sign,draw] {\textbf{Verify}};
+\node (vk) [above=4mm of ver] {\citationsize Verification Key };
+\node (acc) [right=6mm of ver] {\citationsize Accept/Reject };
+%\node (sig) [above=4mm] {\citationsize Signatures };
+\path[->] (msg) edge (sign)
+                 (sk) edge (sign)
+                 (sign) edge[dotted] node[above]  {\scriptsize
+                   Signature} (ver)
+                 (vk) edge (ver)
+                 (ver) edge (acc);
+                 
+
+\end{tikzpicture}
+\medskip
+\begin{itemize}
+
+\item<+-> Want \alert<.>{short} public key, secret key, signatures
+\smallskip
+\item<+-> Under classical number-theoretic assumptions [\citationsize
+  Wat'09,HW'09]:
+\begin{itemize}
+\smallskip
+\item<+-> \alert<.>{Constant} number of group elements in sk, sigs, vk
+\smallskip
+\item<.-> \alert<.>{Linear} size in security parameter $\lambda$
+\end{itemize}
+\smallskip
+\item<+-> Under lattice-based assumptions (in ring setting)
+\begin{itemize}
+\item<+-> Trapdoors and pre-images already have \alert<.>{quasilinear} ($\tilde{O}(\lambda)$) size
+\smallskip
+\item<+-> Best schemes require:
+\smallskip
+\begin{itemize}
+\item<.-> \alert<.>{Logarithmic} number of pre-images in signatures [\citationsize BHJ+14]
+\smallskip
+\item<.-> \alert<.>{Logarithmic} number of trapdoors in the public key [\citationsize DM14]
+\end{itemize}
+\smallskip
+\item<+-> Can we do better?
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}[label=results]{Our Results}
+\begin{itemize}
+\item<+-> \alert<.>{Constant} number of trapdoors in public key, \alert<.>{short
+  signatures}
+\medskip
+\item<+-> Starting Point: DM14 signature scheme
+\smallskip
+\begin{itemize}
+\item<+-> DM14 used \alert<.>{linear homomorphisms} over trapdoor functions
+\smallskip
+\item<+-> \alert<.>{Our idea: }Use \alert<.>{full homomorphisms} over
+  trapdoor functions
+\smallskip
+
+\end{itemize}
+\item<+-> Comparison to previous work ($d=\omega(\log{\log{n}})$)
+\smallskip
+%\end{itemize}
+\begin{table}
+%\citationsize
+\begin{tabular}{|l|cccc|}
+\hline
+Scheme&pk &sk &Sig. &SIS param \\
+&$R_q^{1 \times k}$ mat.&$R_q^{k \times k}$ mat.&$R_q^{k}$
+vec.&$\beta$\\
+\hline
+Boy10,MP12&$n$&$n$&$1$&$\tilde{\Omega}(n^{5/2})$\\
+BHJ+14&$1$&$1$&$d$&$\tilde{\Omega}(n^{5/2})$\\
+DM14&$d$&$1$&$1$&$\tilde{\Omega}(n^{7/2})$\\
+\hline
+This work&1&1&1&$\tilde{\Omega}(d^{2d}\cdot
+n^{11/2})$\\
+\hline
+\end{tabular}
+\end{table}
+\smallskip
+%\begin{itemize}
+%\item<+-> Scheme secure against adversary making at most $2^{2^d}$ queries.
+\item<+-> SIS param can be (large) poly-sized if we set $d=O(\log{n}/\log{\log{n}})$
+\end{itemize}
+% Discuss the basic concrete results, i.e. constant number of matrices,
+% short signatures, assumption, basic idea of using all homomorphism
+% instead of just linear or additive
+\end{frame}
+\begin{frame}[label=outline]{Construction Outline}
+\begin{center}
+\begin{tikzpicture}[old/.style={align=flush center, text
+    width=7em,draw,minimum height=1.5cm},
+newstuff/.style={align=flush center, text width=7em,draw,minimum height=1.5cm, fill=yellow!20}
+]
+\onslide<2->{
+\node (homtrap) at (0,0) [rectangle,old] {Homomorphic Trapdoor Funcs
+  {[\citationsize BGG+14,GVW14]}};
+\node (PHTDF) at (2,-2.5) [rectangle,newstuff] {Puncturable
+  Homomorphic Trapdoor Funcs};
+
+\node (thiswork) at (4,-5) [rectangle,newstuff] {Our Signature Scheme};
+}
+\node (punctrap) at (4,0) [rectangle,old] {Puncturable Trapdoor Funcs
+  {[\citationsize Boy10,MP12]}};
+
+\node (conguess) at (8,0) [rectangle,old] {Confined Guessing
+  {[\citationsize BHJ+14]}};
+
+\node (DM) at (6,-2.5) [rectangle,old] {DM Signature Scheme
+  {[\citationsize DM14]}};
+
+\path[->]
+(punctrap) edge (DM)
+(conguess) edge (DM);
+
+\onslide<2->{
+\path[->] 
+(homtrap) edge (PHTDF)
+(punctrap) edge (PHTDF)
+(conguess) edge [bend left=60] (thiswork) 
+(PHTDF) edge (thiswork);
+
+};
+
+\end{tikzpicture}
+\end{center}
+%\onslide<+->
+\end{frame}
+\begin{frame}[label=PHTDF]{Puncturable Homorphic Trapdoor Functions (PHTDF)}
+%\begin{center}
+\begin{tikzpicture}[bob/.style={align=flush center, text width=10em},
+eval/.style={draw,rectangle,fill=green!20,align=flush center}
+]
+\node (basenode) {};
+
+\onslide<6|handout:0>{
+\draw[red, line width=4pt,rounded corners,opacity=1] (4.95cm,2.10cm) rectangle (9.7cm,-.35cm);
+\draw[red, line width=4pt,opacity=1] (4.99cm,-0.32cm) -- (9.66cm,2.07cm);
+}
+\onslide<7-8>{
+\node (ai) [above=-.45cm of basenode] {\small $(a_1,\ldots,a_n)$};
+\node (ri) [above=1.15cm of basenode] {\small $\Red{(r_1,\ldots,r_n)}$};
+
+
+\node (evaltd) [right=1.5cm of ri,eval] {$\text{Eval}_{pk}^{td}$};
+\node (evalfn) [right=1.5cm of ai,eval] {$\text{Eval}_{pk}^{fn}$};
+\node (tempnode) [below=.3cm of evaltd] {};
+
+\node (g) [left=.9cm of tempnode] {$g$};
+
+\path[->]
+  (ri) edge (evaltd)
+  (ai) edge [bend left] (evaltd)
+  (ai) edge (evalfn)
+  (g) edge (evaltd)
+  (g) edge (evalfn);
+}
+
+
+%\onslide<1-5 
+\node (f1) [right=5cm of basenode] 
+  {\large $f_{pk,a,x}(u)$};
+\node (v) [right=2cm of f1] {\large $v$};
+
+\onslide<1,4->{
+\path[->,dashed]
+   (f1) edge (v);
+}
+
+\node (t) [above=.2cm of f1,align=left,minimum width=10em] {\only<2-4|handout:0>{$t={\tilde{t}}^{-1}$}\only<5-6|handout:0>{$t=0$}\only<8>{$t=g(\cdot)$}};
+
+\onslide<3-4,8|handout:1>{
+\path[->,dashed]
+   (v) edge [bend right] node (r) [above,sloped] {\large $\Red{r}$} (f1);
+}
+% \onslide<4-5>{
+% \node (t) [above=.2cm of f1] {$t=0$};
+% }
+\onslide<6|handout:0>{
+\node (f2) [above=1cm of f1] {\large $f_{pk,a,x'}(u')$};
+
+\path[->]
+   (f2) edge[dashed] (v);
+}
+\onslide<8>{
+\path[->]
+  (evalfn) edge (f1)
+  (evaltd) edge [bend left=20] (r);
+
+\path[->,dotted]
+  (evalfn) edge [bend left=45]  (t);
+}
+
+% Add a crossout for slide 3 to signify collision resistance
+\end{tikzpicture}
+%\end{center}
+\begin{itemize}
+\item<+-> Trapdoor functions $a$ with associated (hidden) \alert<.>{tag} $t \in \calT$.
+\smallskip
+\item<+-> Tag $t$ is \alert<.>{invertible}: \onslide<+-> can invert $f$ with trapdoor $r$.
+\smallskip
+\item<+-> Distributional Equivalence:
+\[(r,u \gets \mathcal{U}, v \gets f_{pk,a,x}(u)) \statind (r,u \gets f^{-1}_{pk,a,x}(v),v \gets \mathcal{V})\]
+\item<+-> Tag $t=0$: trapdoor function $a$ is ``punctured:''
+\begin{itemize}
+\smallskip
+\item<+-> $f_{pk,a,\cdot}(\cdot)$ becomes \alert<.>{collision
+    resistant}.
+\end{itemize}
+\smallskip
+\item<+-> Homomorphic Properties
+\begin{itemize}
+\smallskip
+\item<.-> Can evaluate funcs $g$ over tags $t_i$ associated with $a_i$
+\smallskip
+\item<+-> Yields new trapdoor function $a$ with tag $t$, trapdoor $r$
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}[label=OurPHTDF]{Lattice-Based Construction of PHTDFs}
+\begin{tikzpicture}[bob/.style={align=flush center, text width=10em},
+eval/.style={draw,rectangle,fill=green!20,align=flush center}]
+\node (basenode) {};
+
+\node (f1) [right=1cm of basenode] 
+  {\large \only<1-5|handout:1>{$f_{(\matA,\matB),-\matA\Green{\matR}+t\matG,\vecx}(\Green{\vecu})$}\only<6-|handout:0>{$f_{(\matA,\matB),-\matA\Orange{\matR^*}+t\matG,\vecx}(\Orange{\vecu})$}};
+%}\only<3>{$f_{(\matA,\matB),-\matA\Green{\matR},\vecx}(\Green{\vecu})$}};
+\node (v) [right=1.5cm of f1] {\small \only<1-3|handout:1>{$\vecv:=[\matA  \mid -\matA\Green{\matR}+t\matG]\Green{\vecu}+\matB\vecx$}\only<4-|handout:0>{$\vecv$}};
+
+%\only<3>{$\vecv$}
+
+
+\path[->,dashed]
+   (f1) edge (v);
+
+\onslide<2,4->{
+\path[->,dashed]
+   (v) edge [bend right] node (r) [above,sloped] {\only<2,4-5|handout:1>{$\Green{\matR}$}\only<6-|handout:0>{$\Orange{\matR^*}$}} (f1);
+}
+
+
+% \onslide<3>{
+% \node (f2) [above=.5cm of f1] {\large $f_{(\matA,\matB),-\matA\Green{\matR}}(\vecx',\Green{\vecu'})$};
+% \path[->,dashed]
+%   (f2) edge (v);
+
+% \draw[red, line width=4pt] (3.5cm,.55cm) ellipse (3.2cm and 1.6cm);
+% \draw[red, line width=4pt] (1.5cm,-0.6989cm) -- (5.5cm,1.8489cm);
+% }
+% \onslide<4-5>{
+% \node (t) [above=.2cm of f1] {$t=0$};
+% }
+
+
+% Add a crossout for slide 3 to signify collision resistance
+\end{tikzpicture}
+\begin{itemize}
+\item<+-> Construction itself is simple extension of MP12 trapdoors
+\smallskip
+\item<+-> \alert<.>{Short} $\Green{\matR}$ lets us sample \alert<.>{short}
+  preimage $\Green{\vecu}$ for a given $\vecv-\matB\vecx$.
+\smallskip
+\item<+-> \alert<.>{Collision resistance} when punctured follows from
+  SIS.
+\item<+-> Tags may be arbitrary $n \times n$ \alert<.>{matrices}
+\begin{itemize}
+\smallskip
+\item<+-> For trapdoor multiplication, at least one must be scalar multiple of
+  $\matI$.
+\smallskip
+\end{itemize} 
+%\smallskip
+\item<+-> Trapdoor growth from homomorphic computations:
+\smallskip
+\begin{itemize}
+    \item<.-> \textbf{Homom Addition:} Trapdoor grows \alert<.>{additively}.
+      \smallskip
+    \item<+-> \textbf{Homom Multiplication:} Trapdoor grows \alert<.>{asymmetrically} in $\Green{\matR_1},\Green{\matR_2}$
+\vspace{-5pt}
+\[\Orange{\matR^*} := \Green{\matR_1}\cdot\Green{\poly(n)}+t_1\Green{\matR_2}\]
+%\smallskip
+\end{itemize}
+\vspace{-20pt}
+\item<+-> Larger Trapdoors $\to$ larger pre-images, larger SIS solutions.
+%\item<+-> Goal: Compute desired function with minimal trapdoor growth 
+\end{itemize}
+\end{frame}
+\begin{frame}[label=PHTDFtoSigs]{Signatures from PHTDFs}
+\begin{tikzpicture}[bob/.style={align=flush center, text width=10em},
+eval/.style={draw,rectangle,fill=green!20,align=flush center}
+]
+\node (basenode) {};
+
+\node (ai) [above=-.45cm of basenode] {\small $(a_1,\ldots,a_n)$};
+\visible<1-2,5-|handout:0>{
+\node (ri) [above=1.15cm of basenode] {\small $\Red{(r_1,\ldots,r_n)}$};
+}
+
+\node (evaltd) [right=1.5cm of ri,eval] {$\text{Eval}_{pk}^{td}$};
+\node (evalfn) [right=1.5cm of ai,eval] {$\text{Eval}_{pk}^{fn}$};
+\node (tempnode) [below=.3cm of evaltd] {};
+
+\onslide<1-2,5-6|handout:0>{
+\path[->]
+  (ri) edge (evaltd)
+  (ai) edge [bend left] (evaltd);
+}
+
+\path[->]
+  (ai) edge (evalfn);
+
+\onslide<2-|handout:1>{
+\node (g) [left=.9cm of tempnode] {\only<2-6|handout:1>{$g$}\only<7|handout:0>{$g^*$}};
+\path[->]
+  (g) edge (evalfn);
+}
+
+
+
+\node (f1) [right=5cm of basenode] 
+  {\large \only<2->{$f_{pk,a,x}(\Green{u})$}};
+
+
+\node (v) [right=1.7cm of f1] {$v$};
+\visible<6-7|handout:0>{
+\node (v2) [right=-0.15cm of v] {$=f_{pk,\bar{a},\bar{x}}(\Green{\bar{u}})$};
+}
+
+\onslide<7|handout:0>{
+\node(f2) [above=1cm of f1] {\large $f_{pk,\bar{a},\bar{x}}(\Green{\bar{u}})$};
+\path[->,dashed]
+    (f2) edge [] (v);
+
+}
+
+
+\onslide<2,5-6|handout:0>{
+\path[->]
+   (v) edge [bend right,dashed] node (r) [above,sloped] {\large
+     $\Red{r}$} (f1)
+  (g) edge (evaltd)
+
+  (evaltd) edge [bend left=20] (r);
+}
+\onslide<2-|handout:1>{ 
+
+\node (t) [above=.2cm of f1,align=left,minimum width=10em] {\only<1-6|handout:1>{$t=g(\cdot)$}\only<7|handout:0>{$t=0$}};
+
+\path[->]
+  (evalfn) edge (f1);
+
+
+\path[->,dotted]
+  (evalfn) edge [bend left=45]  (t);
+
+}
+
+% \onslide<2>{
+%}
+
+\onslide<3,7|handout:0>{
+\path[->,dashed]
+   (f1) edge [] node (quest) [above] {\small \only<3>{?}} (v);
+}
+
+% Add a crossout for slide 3 to signify collision resistance
+\end{tikzpicture}
+\begin{block}{Signature Scheme}
+\vspace{2pt}
+\begin{description}
+\item<+->[\textbf{Gen}$(1^\lambda)$:] Choose $vk=(pk,a_1,\ldots,a_n,v)$,
+  $\Red{sk}=\Red{(r_1,\ldots, r_n)}$
+\item<+->[\textbf{Sign}$(x)$:] Sample $g \gets \mathcal{G}$. Invert 
+  to valid $\Green{u}$. Output $(\Green{u},g)$
+\item<+->[\textbf{Ver}$(x,(\Green{u},g))$:] Verify that $\Green{u}$
+  valid, $f_{pk,a,x}(\Green{u})=v$.
+\vspace{2pt}
+\end{description}
+\end{block}
+%\vspace{-2pt}
+\begin{itemize}
+\item<+-> Scheme security/correctness depend on properties of
+  sampled $g \gets \mathcal{G}$
+\smallskip
+\item<+-> Actual Scheme: $t$ must always be \alert<.>{invertible.}
+\medskip
+\item<+-> Security reduction against $\Adv$ (with non-negligble probability):
+\smallskip
+\begin{enumerate}
+\smallskip
+\item<.-> $t=g(\cdot)$ must be invertible for \alert<.>{all but one} of queries made by
+  $\Adv$.
+\medskip
+\item<+-> $\Adv$ chooses $g^*$ for forgery such that $t=g^*(\cdot)=0$
+\end{enumerate}
+\end{itemize}
+\end{frame}
+\begin{frame}[label=tags]{Tags and $g$}
+\begin{tikzpicture}[fred/.style={line width=1pt}]
+
+\onslide<2-4>{
+\node (t) [] at (0cm,0cm) {\LARGE $t^{(g)}=$};
+
+\foreach \x/\xtext in
+{0cm/0,0.5cm/1,1cm/0,1.5cm/1,2cm/1,2.5cm/0,3cm/0,3.5cm/1,4.2cm/$\ldots$}
+{
+  \node (my\x) [] at (\x+1cm,-0.1cm) {\LARGE \xtext};
+}
+\node (mylast) at (5.6cm,0cm) {};
+}
+
+
+
+\onslide<2>{
+%$t_1^(g)$
+\draw [fred] (.85cm,-.4cm) -- (0.95cm,-.4cm) -- (1.00cm,-.45cm) --
+(1.05cm,-.4cm) node
+[very near start,below=.35cm] {\scriptsize $t_1^{(g)}$} -- (1.15cm,-.4cm);
+\draw [line width=1pt] (.85cm,-.4cm) --(.85cm,-.35cm); 
+\draw [line width=1pt] (1.15cm,-.4cm) --(1.15cm,-.35cm);
+
+
+% $t_2^{g}$
+\draw [fred] (.85cm,-.45cm) -- (.85cm,-.5cm) -- (1.35cm,-.5cm) --
+(1.40cm,-.55cm) -- (1.45cm,-.5cm) node [very near
+end,below=.3cm] {\scriptsize $t_2^{(g)}$} -- (1.65cm,-.5cm) --
+(1.65cm,-.45cm);
+}
+
+\onslide<2-4>{
+%t_3^{(g)}
+\draw [fred] (.85cm,-.55cm) -- (.85cm,-.6cm) -- (2cm,-.6cm) -- 
+(2.05cm,-.65cm) -- (2.1cm,-.6cm) node (t3) [very near end,below=.20cm]
+{\scriptsize $t_3^{(g)}$} -- (2.65cm,-.6cm) -- (2.65cm,-.55cm);
+
+\onslide<2>{
+%t_4^{(g)}
+\draw [fred] (.85cm,-.65cm) -- (.85cm,-.7cm) -- (4cm,-.7cm) --
+(4.05cm,-.75cm) -- (4.1cm,-.7cm) node [very near end,below=.10cm]
+{\scriptsize $t_4^{(g)}$} -- (4.65cm,-.7cm) -- (4.65cm,-.65cm);
+}
+}
+
+\onslide<3-4>{
+\node (poly) [right=6cm of t] {\LARGE $x+x^3$};
+\path[->]
+ (t3) edge [bend right=15] (poly);
+
+}
+
+\onslide<5->{
+
+\node (a0) [] {\large $a_0$};
+
+\node (tistar) [below=.5cm of a0] {$\hat{t}_{i^*}$};
+
+\path
+ (a0) edge [dotted,-] (tistar);
+
+}
+
+
+\end{tikzpicture}
+\begin{itemize}
+\item<+-> Each $g \in \mathcal{G}$ is uniquely specified by a tag $t^{(g)}
+  \in \bit^{n}$
+\smallskip
+\item<+-> Tags decompose into prefixes $t_i^{(g)}$ of
+  length $c_{i}=2^{i}$
+\begin{itemize}
+\item<+-> Prefixes embed into $\text{GF}(2^n)$ (higher coefficients
+  set to 0)
+\smallskip
+\item<+-> \alert<.>{Key Point}: Embedding of $t^{(g)}-t^{(g')}$
+  is invertible for $g \neq g'$.
+\end{itemize}
+%\smallskip
+\item<+-> Trapdoor $a_{0}$ in public key has random
+  tag prefix of length $c_{i^*}$.
+\smallskip
+
+%\smallskip
+\item<+-> Choice of $i^*$ via \alert<.>{confined guessing}
+  {\citationsize [BHJ+14,DM14]}
+% use words  to describe 
+ \begin{itemize}
+ \item<+->  $\Adv$ makes $Q$ queries, succeeds with probability
+   $\epsilon$
+\smallskip 
+ \item<.-> Choose smallest $i^*$ such that $2Q^2/\epsilon \leq
+   2^{c_{i^*}}$
+\smallskip 
+\item<+-> $Q$ random tags will have distinct length
+  $c_i^*$ prefixes with prob $\epsilon/2$
+ \end{itemize}
+\item<+-> $i^*$ must be kept secret from $\Adv$ 
+\smallskip
+ \end{itemize}
+ \end{frame}
+
+ \begin{frame}[label=compg]{Computing $g$ Homomorphically}
+\begin{tikzpicture}
+\onslide<1->{
+
+\node (a0) [] {\large $a_0$};
+
+\node (tistar) [below=.5cm of a0] {$\hat{t}_{i^*}$};
+
+\path
+ (a0) edge [dotted,-] (tistar);
+
+}
+\onslide<3,6->{
+
+ \node (a1) [right=2cm of a0] {\large $a_1$ }; 
+ \node (a2) [right=1cm of a1] {\large $a_2$ };
+ \node (ldots1) [right=0.25cm of a2] {\large $\ldots$};
+ \node (ai) [right=0.25cm of ldots1] {\large $a_{i^*}$};
+ \node (ldots2) [right=0.25cm of ai] {\large $\ldots$};
+ \node (ad) [right=0.25cm of ldots2] {\large $a_{d}$};
+ 
+ \node (t1) [below=.6cm of a1] {$0$};
+ \node (t2) [below=.6cm of a2] {$0$};
+ %\node (tldots1) [below=.7cm of ldots1] {$0$};
+ \node (ti) [below=.6cm of ai] {$1$};
+% \node (tldots2) [below=.7cm of ldots2] { $0$};
+\node (td) [below=.6cm of ad] {$0$};
+
+\path[dotted,-]
+  (a1) edge[-] (t1)
+  (ai) edge[-] (ti)
+ (a2) edge[-] (t2)
+ % (ldots1) edge[-] (tldots1)
+  %(ldots2) edge[-] (tldots2)
+  (ad) edge[-] (td);
+ 
+}
+
+\onslide<4-> {
+\node (b) [right=.4cm of a0] {\large $b$};
+\node (istar) [below=.55cm of b] {$i^*$};
+
+\path[dotted]
+  (b) edge[-] (istar);
+}
+
+\onslide<6->{
+
+\path
+  (istar) edge [bend right] node [above, sloped] {\scriptsize $i^*\overset{?}{=} 1$} (t1)
+  (istar) edge [bend right] node [above, near end, sloped] {\scriptsize
+    $i^*\overset{?}{=} 2$} (t2)
+  (istar) edge [bend right=30] node [above, very near end, sloped]
+  {\scriptsize $i^*\overset{?}{=} i^*$} (ti)
+ (istar) edge [bend right=30] node [above, very near end, sloped] 
+ {\scriptsize $i^*\overset{?}{=} d$} (td);
+
+}
+
+\end{tikzpicture}
+ \begin{itemize}
+\item<+-> Evaluation of $g$:  Subtract $i^*$th \alert<.>{prefix} of
+  $t^{(g)}$ from $\hat{t}_{i^*}$.
+ \smallskip
+
+\item<+-> Selection of prefix of $t^{(g)}$ needs to be done
+  \alert<.>{homomorphically}
+\smallskip
+\item<+-> Old way: {\citationsize [DM14]} Length $d$ indicator vector
+  for $i^*$ in pk
+\smallskip
+\item<+-> Our way: Store $i^*$ as tag in pk
+\smallskip
+\begin{itemize}
+\item<+-> Degree $d-1$ interpolation polynomial computes
+  $i\overset{?}{=}i^*$ 
+\smallskip 
+\item<+-> Can compute vector
+  homomorphically from $b$ alone.
+\smallskip
+\end{itemize}
+\item<+-> Asymmetric trapdoor growth in multiplication is key
+\begin{itemize}
+\smallskip
+\item<+-> Yields $d^d\poly(n)$ growth instead of $d^dn^{\log{d}}$ growth
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}[label=conclusions]{Concluding Thoughts}
+  \begin{itemize}
+  \item<+-> Open problems:
+\begin{itemize}
+  \item<+-> Short signatures with short public keys with less trapdoor
+    growth?
+\smallskip
+  \item<+-> Can techniques be extended to achieve fully secure IBE?
+  \end{itemize}
+\end{itemize}
+  \bigskip
+  \onslide<+->
+  \begin{center}
+    {\Large Hiring? Talk to me!}
+  \end{center}
+  
+\end{frame}
+\end{document}

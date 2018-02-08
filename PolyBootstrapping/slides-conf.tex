@@ -1,0 +1,578 @@
+% hack to deal with beamer/pgf bug
+\RequirePackage{atbegshi}
+
+% "draft" makes compilation faster; remove for final version
+% shadow = put drop shadows behind blocks by default
+% xcolor: svgnames imports lots of color names
+% table allows for multi-color table rows
+% pdftex is the compiler
+\documentclass[shadow,xcolor=pdftex,svgnames,table,t]{beamer}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{array}
+\newif\iflncs\lncstrue
+% need to load tikz defs before beamer defs, for some reason
+\input{tikzhead}
+\input{beamhead}
+
+% common stuff
+\input{../latthead}
+\input{../vecmathead}
+\input{../comphead}
+\input{../crypthead}
+\input{../lrhead}
+\input{../bbhead}
+\input{../noteshead}
+\input{../mathabxhead}
+
+% trace
+\renewcommand{\O}{\mathcal{O}}
+\newcommand{\Blue}[1]{{\color{Blue}#1}}
+\newcommand{\Red}[1]{{\color{Red}#1}}
+\newcommand{\Purple}[1]{{\color{Purple}#1}}
+\newcommand{\Green}[1]{{\color{Green}#1}}
+
+% fix weird spacing of \pmod, and introduce \pmod* command; see
+% http://tex.stackexchange.com/questions/39221/removing-extra-space-with-pmod-command
+\makeatletter
+\renewcommand{\pod}[1]{\mathchoice
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\mkern4mu(#1)}
+  {\mkern4mu(#1)}
+}
+\makeatletter
+\let\@@pmod\pmod
+\DeclareRobustCommand{\pmod}{\@ifstar\@pmods\@@pmod}
+\def\@pmods#1{\mkern4mu({\operator@font mod}\mkern 6mu#1)}
+\makeatother
+%%%% 
+
+\title
+{ Faster Bootstrapping with\\Polynomial Error
+}
+
+\author
+{ {\Large Jacob Alperin-Sheriff}
+  \and
+  {\Large Chris Peikert}
+}
+
+\institute{School of Computer Science\\Georgia Tech}
+
+\date
+{
+  CRYPTO 2014\\
+  19 August 2014
+}
+
+% restricts presentation to specified frames, for faster compilation;
+% comment out the line to get the entire presentation
+
+% Frame labels:
+% title, fhe, bootstrapping, prev, results, overview,embedwarmup,
+% embedsmall, thanks
+
+
+
+%\includeonlyframes{embedwarmup}
+
+\begin{document}
+
+%%% put less vertical space around displayed equations
+\setlength{\abovedisplayskip}{8pt plus 2pt minus 1pt}
+\setlength{\belowdisplayskip}{8pt plus 2pt minus 0pt}
+\setlength{\abovedisplayshortskip}{0pt plus 2pt}
+\setlength{\belowdisplayshortskip}{8pt plus 2pt minus 1pt}
+
+\begin{frame}[label=title]
+  \titlepage
+\end{frame}
+
+\jnote{Will people notice if we don't change the first two slides?}
+
+\begin{frame}[label=fhe]{Fully Homomorphic Encryption {\citationsize
+      [RAD'78,Gentry'09]}}
+  \begin{itemize}
+  \item<+-> FHE lets you do this:
+    \begin{center}
+      \begin{tikzpicture}
+       \node (c) {$\fbox{$\mu$}$};
+  
+        \node[right=of c,algorithm=Blue] (eval)
+        {$\text{Eval}\parens*{f}$};
+
+        \node[right=of eval] (out) {$\fbox{$f(\mu)$}$};
+
+        \path
+        (c) edge (eval)
+        (eval) edge (out)
+        ;
+      \end{tikzpicture}
+    \end{center}
+    % where $\abs{f(\mu)}$ and decryption time don't depend on
+    % $\abs{f}$.
+
+    \medskip
+    A cryptographic ``holy grail'' with countless applications.
+
+    \medskip First solved in {\citationsize [Gentry'09]}, followed by
+
+    \hfill
+    {\scriptsize [vDGHV'10,BV'11a,BV'11b,BGV'12,B'12,GSW'13,\ldots]}
+  \end{itemize}
+
+  \onslide<+->
+  %\bigskip
+  \begin{itemize}
+  \item ``Naturally occurring'' schemes are \alert<.>{somewhat
+      homomorphic}~(SHE):
+
+    can only evaluate functions of an \alert<.>{\textit{a priori}
+      bounded} depth.
+  \end{itemize}
+
+  \begin{center}
+    \begin{tikzpicture}[node distance=.4cm]
+      \node (c) {$\Green{\fbox{$\mu$}}$};
+      
+      \node[right=of c,algorithm=Blue] (eval)
+      {$\text{Eval}\parens*{f}$};
+      
+      \node[right=of eval] (cprime) {$\color{Orange} \fbox{$f(\mu)$}$};
+
+      \node[right=of cprime,algorithm=Blue] (eval2)
+      {$\text{Eval}\parens*{g}$};
+
+      \node[right=of eval2] (cdp) {$\Red{\fbox{$g(f(\mu))$}}$};
+
+      \path
+      (c) edge (eval)
+      (eval) edge (cprime)
+      (cprime) edge (eval2)
+      (eval2) edge (cdp)
+      ;
+    \end{tikzpicture}
+  \end{center}
+  \begin{itemize}
+  \item<+-> Thus far, ``\alert{bootstrapping}'' is required to
+    achieve~\alert{unbounded} FHE.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=bootstrapping]{Bootstrapping: SHE $\to$ FHE {\citationsize [Gentry'09]}}
+  \begin{itemize}
+  \item<+-> \alert<.>{Homomorphically evaluates the SHE decryption
+      function} to ``refresh'' a ciphertext $\Red{\fbox{$\mu$}}$,
+    allowing further homomorphic operations.
+
+    \begin{center}
+      \begin{tikzpicture}[every node/.style={node distance=.7cm}]
+        \node (sk) {$\Green{\fbox{$sk$}}$};
+
+        \node[right=of sk,algorithm=Blue] (eval)
+        {$\text{Eval}\parens*{\; \text{Dec} \parens*{\cdot\;,
+              \Red{\fbox{$\mu$}}} \;}$};
+
+        \node[right=of eval] (out) {${\color{Orange} \fbox{$\mu$}}$};
+
+        \path (sk) edge (eval) (eval) edge (out) ;
+
+      \end{tikzpicture}
+    \end{center}
+
+    % \onslide<+->
+    % \begin{itemize}
+    % \item \alert<.>{Goal}: Efficiency!  Minimize depth $d$ and
+    %   size $s$ of decryption ``circuit.''
+
+    %   \medskip
+    % \item Best SHEs {\citationsize [BGV'12]} can evaluate in time
+    %   $\tilde{O}(d \cdot s \cdot \lambda)$.
+    % \end{itemize}
+
+    \smallskip
+  
+  \item<+-> Error growth of bootstrapping determines cryptographic
+    assumptions.
+
+    \onslide<+->
+    State of the art {\citationsize [BGV'12,B'12,GSW'13]}:
+
+    \begin{itemize}
+    \item<+-> \textbf{Homom Addition:} Error grows \alert<.>{additively}.
+      \smallskip
+    \item<+-> \textbf{Homom Multiplication:} Error grows by
+      \alert<.>{$\poly(\lambda)$} factor.
+    \end{itemize}
+      
+    \medskip
+  \item<+-> Known decryption circuits have \alert<.>{logarithmic}
+    $O(\log \lambda)$ depth.
+
+    \onslide<+-> $\Longrightarrow$ Quasi-polynomial
+    \alert<.>{$\lambda^{O(\log \lambda)}$} error growth and lattice
+    approx factors
+
+    \medskip
+  \item<+-> Can we do better?
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=prev1]{Bootstrapping with Polynomial Error
+    {\citationsize[BrakerskiVaikuntanathan'14]}}
+
+  \begin{itemize}
+  \item<+-> Error growth for multiplication in {\citationsize
+      [GSW'13]} is \alert<.>{asymmetric}:
+    % 
+    \[\text{Error in }\matC:=\Blue{\matC_1} \boxdot \Red{\matC_2}\text{
+      is } \vece := \Blue{\vece_1} \cdot \text{poly}(\lambda) + \Blue{\mu_1}
+    \cdot \Red{\vece_2}. \]
+  \item<+-> Make multiplication \alert<.>{right-associative}:
+    \[\matC_1 \boxdot (\cdots (\matC_{t-2} \boxdot (\matC_{t-1} \boxdot
+    \matC_{t})) \cdots )\text{ has error } \textstyle\sum_{i}\vece_{i}
+    \cdot \text{poly}(\lambda)\]
+  \item<+-> Barrington's Theorem \vspace{-5pt}
+  \end{itemize}
+  
+  \onslide<.->
+  \begin{tikzpicture}[circuit logic US, tiny circuit symbols,
+    every circuit symbol/.style={ fill=white,draw}]
+    \matrix[column sep=5mm] (bobmat) { \onslide<4- >{ \node (i0) {0};}
+      \pgfmatrixnextcell \pgfmatrixnextcell
+      \\ \pgfmatrixnextcell  \node [and gate] (a1) {};  \pgfmatrixnextcell \\
+      \onslide<4->{\node (i1) {0};} \pgfmatrixnextcell \pgfmatrixnextcell \node [or gate] (o) {};\\
+      \pgfmatrixnextcell \node [nand gate] (a2) {}; \pgfmatrixnextcell \\
+      \onslide<4->{\node (i2) {1};} \pgfmatrixnextcell \pgfmatrixnextcell \\
+    }; \draw (i0.east) -- ++(right:3mm) |- (a1.input 1); \draw
+    (i1.east) -- ++(right:3mm) |- (a1.input 2); \draw (i1.east)
+    -- ++(right:3mm) |- (a2.input 1); \draw (i2.east) --
+    ++(right:3mm) |- (a2.input 2); \draw (a1.output) --
+    ++(right:3mm) |- (o.input 1); \draw (a2.output) --
+    ++(right:3mm) |- (o.input 2); \draw (o.output) --
+    ++(right:3mm);
+    
+    \node<3-|handout:0> (depthnode) [below=5pt of bobmat] 
+    {depth $d \uncover<5->{\alert{\approx 3 \log \lambda}}$};
+    
+    
+    \node (arrowpointright) [right=31pt of o] {};
+    \node (arrowpointleft) [right=6pt of o] {};
+    \node (tempnode) [right=6pt of arrowpointright] {};
+    
+    \draw[->,line width=5pt] (arrowpointleft) -- (arrowpointright);
+    
+    
+    \node (P01) [above=6pt of tempnode] {\scriptsize
+      $(P_{0,1})$};
+    \node (P00) [below=6pt of tempnode] {\scriptsize
+      $(P_{0,0})$};
+    \node (P11) [right=14pt of P01] {\scriptsize
+      $(P_{1,1})$};
+    \node (P10) [right=14pt of P00] {\scriptsize
+      $(P_{1,0})$};         
+    \node (P21) [right=13pt of P11] {\scriptsize
+      $\ldots$};
+    \node (P20) [right=13pt of P10] {\scriptsize
+      $\ldots$};  
+    \node (P31) [right=13pt of P21] {\scriptsize
+      $(P_{14,1})$};
+    \node (P30) [right=13pt of P20] {\scriptsize
+      $(P_{14,0})$};  
+    \node (P41) [right=16pt of P31] {\scriptsize
+      $(P_{15,1})$};
+    \node (P40) [right=16pt of P30] {\scriptsize
+      $(P_{15,0})$};  
+    
+    \node<3-|handout:0> (lengthnode) [right=100pt of depthnode]
+    {length $4^d \uncover<5->{\alert{\approx \lambda^{6}}}$};
+    
+    \onslide<4->{
+      \path[->] (P00) edge (P11)
+      (P11) edge (P21) 
+      (P21) edge (P30)
+      (P30) edge (P40);
+    }
+    
+  \end{tikzpicture}
+  
+  \begin{itemize}
+  \item<5->[\RedCross] Problem: Barrington's transformation is
+    \alert<5->{very inefficient}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=results]{Our Results}
+  \begin{enumerate}
+  \item<+-> \alert<.>{Faster bootstrapping} with \alert<.>{small
+      polynomial} error growth
+
+    \begin{itemize}
+    \item<+-> Treats decryption as an \alert<.>{arithmetic
+        function} over $\Zq$, not a circuit.
+      
+      \onslide<+-> \alert<.>{Avoids Barrington's Theorem} -- but still
+      uses permutation matrices!
+      
+      \medskip
+    \item<+-> \uline{Key Idea}: Embed additive group $(\Zq,+)$ into
+      small symmetric group
+      
+      \medskip
+      
+      \onslide<+->
+      
+      \medskip
+      \renewcommand{\arraystretch}{1.5}
+      \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Reference} & \textbf{\# Homom Ops} & \textbf{Noise Growth}\\
+        \hline
+        {\citationsize [GHS'12,AP'13]} (packing) & $\tilde{O}(1)$ \GreenCheck &
+        $\lambda^{O(\log \lambda)}$ \\ \hline \hline
+        {\citationsize [BV'14]} & $\tilde{O}(\lambda^6)$ & large
+        $\poly(\lambda)$ \\
+        \hline
+        This work & $\tilde{O}(\lambda)$ \GreenCheck & $\tilde{O}(\lambda^{2})$\\
+        \hline
+      \end{tabular}
+      
+      % \medskip
+      % \item<+-> \alert<.>{Small polynomial} approx factors
+      %   \alert<.>{without ``dimension leveraging.''}
+    \end{itemize}
+    
+    
+    \medskip
+  \item<+-> Variant of {\citationsize [GSW'13]} encryption scheme
+    \begin{itemize}
+    \item<+-> Very simple description and error analysis
+      
+      \medskip
+    \item<+-> Enjoys \alert<.>{full re-randomization} of error as a
+      natural side effect
+      
+      \smallskip Cf.~{\citationsize [BV'14]}: partial
+      re-randomization, using extra key material
+    \end{itemize}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[label=gsw]{Simpler GSW Variant}
+  \begin{itemize}
+  \item<+-> ``Gadget'' $\Zq$-matrix $\matG$ {\citationsize [MP'12]}:
+    for any $\Zq$-matrix $\matA$,
+    \[ \Red{\matG^{-1}(\matA)} \text{ is \Red{short}} \qquad
+    \text{and} \qquad \matG \cdot \Red{\matG^{-1}(\matA)} = \matA \pmod*{q}. \]
+
+  \item<+-> Ciphertext encrypting $\mu \in \bit$ under $\Blue{\vecs}$
+    is a \alert<.>{$\Zq$-matrix} $\matC$ satisfying
+    \[ \Blue{\vecs} \matC =
+    \mu \cdot \Blue{\vecs} \matG + \Red{\vece} \pmod{q}. \]
+    
+  \item<+-> Homomorphic multiplication: $\matC_1 \boxdot \matC_2 :=
+    \matC_1 \cdot \Red{\matG^{-1}(\matC_2)}$.
+    \begin{align*}
+      \Blue{\vecs} \matC_1 \cdot \Red{\matG^{-1}(\matC_2)} &=
+      (\mu_{1} \cdot \Blue{\vecs} \matG + \Red{\vece_{1}})
+      \cdot \Red{\matG^{-1}(\matC_{2})} \\
+      \onslide<.->{
+        &= \mu_{1} \cdot \Blue{\vecs} \matC_{2} + \Red{\vece_{1}
+          \cdot \matG^{-1}(\matC_{2})}} \\
+      \onslide<.->{
+        &= \mu_1 \mu_2 \cdot \Blue{\vecs} \matG + \underbrace{\mu_1
+          \cdot \Red{\vece_2} + \Red{\vece_1 \cdot
+            \matG^{-1}(\matC_2)}}_{\text{new error}}.}
+    \end{align*}
+    
+  \item<+-> Old method {\citationsize [GSW'13]}:
+    $\matG^{-1}$ is \alert<.>{deterministic bit
+      decomposition}.
+
+    \smallskip
+  \item<+-> New: $\matG^{-1}$ samples a \alert<.>{(random) subgaussian
+      preimage}.
+    \begin{itemize}
+    \item[$\Rightarrow$] Tight $O(\sqrt{n})$ error growth, full
+      rerandomization of error
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\newcommand{\mathbox}[1]{\fbox{$#1$}}
+
+\begin{frame}[label=overview]{Overview of Our Bootstrapping Algorithm}
+  \vspace{-3pt} \onslide<+->
+  \begin{block}{}
+    \begin{itemize}
+    \item Decryption in LWE-based schemes can be expressed as
+      \vspace{-5pt}
+      \begin{equation*}
+        \text{Dec}_{\vecs}(\vecc) := \round{\inner{\Blue{\vecs}, \vecc}}_2 \in
+        \{0,1\}\text{ with } \Blue{\vecs} \in \Zq^{n},\; \vecc \in \bit^n
+      \end{equation*}
+
+    \end{itemize}
+  \end{block}
+  \vspace{-4pt} \jnote{Something about how at the surface it's similar
+    to other depth-3 schemes?}
+  \begin{enumerate}
+  \item<+-> \alert<.-.(1)>{Prepare}: Encrypt each $\Blue{s_j} \in \Zq$
+    under a certain group embedding.
+
+  \end{enumerate}
+  \onslide<+-> \alert<.->{Bootstrapping} procedure uses two homomorphic
+  algorithms:
+  \[ \mathbox{a} \boxplus \mathbox{b}=\mathbox{a+b} \quad \text{and}
+  \quad
+  \mathsf{Equals}(\mathbox{v},z)=
+  \begin{cases}
+    \scriptsize\mathbox{1} & \text{if } v=z \\
+    \scriptsize \mathbox{0} & \text{otherwise}
+  \end{cases} \]
+
+  \smallskip
+  \onslide<+-> Given ciphertext $\vecc \in \bit^{n}$ and encryptions
+  \mathbox{\Blue{s_j}}, evaluate:
+
+  \smallskip
+  \begin{enumerate}
+    \setcounter{enumi}{1}
+    
+  \item<.-> \alert<.->{Inner Product}: compute $\displaystyle
+    \mathbox{v} := \inner{\mathbox{\Blue{\vecs}}, \vecc} =
+    \bigboxplus_{j:\; c_j=1} \mathbox{\Blue{s_j}}$
+    
+    \medskip
+  \item<+-> \alert<.->{Round}: compute $\displaystyle
+    \mathbox{\round{v}_2} := \bigboxplus_{z:\; \round{z}_2=1}
+    \mathsf{Equals}(\mathbox{v},z) $
+  \end{enumerate}
+  
+  \begin{itemize}
+  \item<+-> Remains to implement $\bigboxplus$ and $\mathsf{Equals}$
+    for plaintext space $\Zq$.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=embedwarmup]{Warmup: Embedding $(\Zq,+)$ into
+    $(S_q,\cdot)$}
+  % {\tiny CJP: there need to be 0s with boxes around them in the
+  %   encrypted matrices.  The latex is
+  %   unreadable/unmaintainable... consider using tikz's matrix
+  %   environment to avoid all these mode changes.}
+
+  \onslide<+->
+  \begin{center}
+    % \renewcommand{\arraystretch}{.5}
+    \begin{tabular}{ccccc}
+      % \renewcommand{\arraystretch}{1.0}
+      $\Zq$&0&1&\ldots&$q-1$\\
+      \noalign{\medskip}
+
+      $S_q$&$\arraycolsep=3pt\scriptsize \begin{pmatrix}\only<1 |
+        handout:0>{1}\only<2->{\Red{\mathbox{1}}}&\invisible{\mathbox{1}}&&\invisible{\mathbox{1}}\\
+        \uncover<2->{\Red{\mathbox{0}}}&1&&\\
+        \uncover<2->{\Red{\vdots}}&&\ddots&\\
+        \uncover<2->{\Red{\mathbox{0}}}&&&1\\
+      \end{pmatrix}$&
+
+
+      $\arraycolsep=3pt\scriptsize \begin{pmatrix}\uncover<2->{\Red{\mathbox{0}}}&&\invisible{\mathbox{1}}&1\\
+        \only<1|handout:0>{1}\only<2->{\Red{\mathbox{1}}}&&&\invisible{\mathbox{1}}\\
+        \uncover<2->{\Red{\vdots}}&\ddots&&\\
+        \uncover<2->{\Red{\mathbox{0}}}&&1&
+      \end{pmatrix}$&
+
+      \ldots&
+
+      $\arraycolsep=3pt\scriptsize \begin{pmatrix}\uncover<2->{\Red{\mathbox{0}}}&1&&\invisible{\mathbox{1}}\\
+        \uncover<2->{\Red{\vdots}}&\invisible{\mathbox{1}}&\ddots&\\
+        \uncover<2->{\Red{\mathbox{0}}}&&&1\\
+        \only<1|handout:0>{1}\only<2->{\Red{\mathbox{1}}}&\invisible{\mathbox{1}}&&
+      \end{pmatrix}$\\
+      \noalign{\medskip}
+      \uncover<2->{&$\mathbox{P_0}$&$\mathbox{P_1}$&$\ldots$&$\mathbox{P_{q-1}}$}\\
+    \end{tabular}
+  \end{center}
+  \vspace{-3pt} \medskip \onslide<+->
+  \begin{itemize}
+  \item<+-> Addition: $\mathbox{a} \boxplus \mathbox{b}$ implemented
+    as $\mathbox{P_{a}} \boxdot \mathbox{P_b} = \mathbox{P_{a} \cdot
+      P_{b}}$
+
+    \begin{itemize}
+    \item<.-> Recall: Right-associative multiplication yields
+      polynomial error growth.
+    \end{itemize}
+
+  \item<+-> Equality test: $\mathsf{Equals}(\mathbox{a},b)$: take
+    $b$th entry from first column of $\mathbox{P_a}$.
+
+    \medskip
+  \item<+-> Bottom line: $\tilde{O}(\lambda^3)$ homomorphic operations
+    to bootstrap.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=embedsmall]{Embedding $(\Zq,+)$ into Smaller Symmetric Groups}
+  \begin{itemize}
+  \item<+->Let $q=p_1 \cdots p_t = \tilde{O}(\lambda)$ for distinct
+    prime $p_i$.
+    \begin{itemize}
+      \smallskip
+    \item<.-> Prime Number Theorem allows $p_i, t=O(\log \lambda)$.
+    \end{itemize}
+
+    \onslide<+-> Chinese Remainder Theorem: $\Z_{q} \cong \Z_{p_1}
+    \times \cdots \times \Z_{p_t}$
+
+  \item<+-> New embedding:
+    \begin{align*}
+      \Zq &\to S_{p_1} \times \cdots \times S_{p_t} \\
+      x &\mapsto (P_{x \bmod{p_1}}, \ldots, P_{x \bmod{p_t}})\\
+    \end{align*}
+    \vspace{-30pt}
+
+  \item<+-> Addition: same as in warmup, but component-wise
+
+    \medskip
+  \item<+-> Equality test:
+    \[\mathsf{Equals}_q(\mathbox{a},b)=\bigboxdot_i\mathsf{Equals}_{p_i}(\mathbox{a_{i}},b
+    \bmod p_i)\]
+  \item<+-> Bottom line: $\tilde{O}(\lambda)$ homomorphic operations
+    to bootstrap.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=thanks]{Open Problems}
+  \begin{itemize}
+  \item<+-> Can we bootstrap in \alert<.>{sublinear homom ops} with
+    \alert<.>{polynomial error}?
+    \begin{itemize}
+    \item<.-> Barrier in {\citationsize [GSW'13]}: single-bit
+      encryption (no ``packing'')
+    \end{itemize}
+
+    \medskip
+  \item<+-> \alert<.>{Circular security} for unbounded FHE?
+    \begin{itemize}
+    \item<.-> Does our representation help or hurt security?
+    \end{itemize}
+  \end{itemize}
+
+  \medskip
+  \onslide<+->
+  \begin{center}\Large
+    Thanks!
+  \end{center}
+\end{frame}
+
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

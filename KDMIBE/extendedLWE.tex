@@ -1,0 +1,259 @@
+
+\section{Hardness of Extended LWE}
+\label{sec:extended-lwe}
+
+In this section we describe the \emph{extended}-$\lwe$ problem (as
+originally defined in~\cite{DBLP:conf/crypto/ONeillPW11}), and give a
+reduction to it from the standard $\lwe$ problem (with polynomially
+bounded parameters), thus establishing its hardness under a mild
+assumption.
+
+\subsection{Background and the Problem}
+
+O'Neill, Peikert and Waters~\cite{DBLP:conf/crypto/ONeillPW11}
+introduced the extended-$\lwe$ problem as a simplifying tool for
+certain security proofs in which $\lwe$ is used in a ``hash
+proof-like'' fashion, and additional information about the secret key
+is revealed to the attacker.  In prior works, dealing with such
+situations often involved adding some ``overwhelming''
+(super-polynomial) extra noise in order to disguise a small but
+noticeable statistical difference between, e.g., creating a ciphertext
+honestly according to an encryption algorithm, and creating one by
+combining the secret key with a challenge $\lwe$ instance.
+Unfortunately, the use of such overwhelming noise requires an
+underlying $\lwe$ problem with super-polynomial modulus $q$ and
+inverse error rate $1/\alpha$, which corresponds to a substantially
+stronger assumption than is needed in the security proofs for many
+other cryptosystems.
+
+Here we recall the formal definition of the extended-$\lwe$ problem.
+In addition to the usual $n$, $q$, and $\chi$ parameters for $\lwe$,
+we also have a number $m=\poly(n)$ of \lwe samples, an efficiently
+sampleable ``hint'' distribution $\tau$ over $\Z^{m}$ (often, a
+discrete Gaussian $D^{m}_{\Z,r}$ for some $r \geq 1$) and another
+Gaussian parameter $\beta > 0$.  The problem is to distinguish, with
+non-negligible advantage, between the two experiments described next;
+the extended-\lwe assumption is that this distinguishing problem is
+hard.  In the $\mathsf{ExptLWE}$ experiment, the challenger chooses
+$\matA \gets \Zq^{n \times m}$, a secret $\vecs \gets \Zq^{n}$ and
+error vector $\vecx \gets \chi^{m}$ defining $\vecb^{t} = \vecs^{t}
+\matA + \vecx^{t}$, along with a ``hint'' vector $\vecz \gets \tau$
+and error term $\tilde{x} \gets D_{\Z,\beta q}$, and outputs
+\[ (\matA, \vecb, \vecz, b'=\inner{\vecx, \vecz} + \tilde{x}). \] Note
+that the first two components just comprise $m$ \lwe samples, while
+the latter two components may be seen as a hint about the error vector
+$\vecx \in \Z^{m}$ in the form of a (noisy) inner product with a
+vector $\vecz \in \Z^{m}$.  Note that the noisy inner product is an
+integer, which is not reduced modulo anything.  The
+$\mathsf{ExptUnif}$ experiment is the same, except that $\vecb$ is
+defined to be uniformly random and independent of everything else.
+
+Notice that because $\matA$ and $\vecz$ are public, one can amortize
+the extended-\lwe problem by outputting any $\poly(n)$ number of
+vectors $\vecb_{i}^{t}=\vecs_{i}^{t} \matA + \vecx_{i}^{t}$ and hints
+$b'_{i} = \inner{\vecx_{i}, \vecz} + \tilde{x}_{i}$, for independent
+$\vecs_{i}, \vecx_{i}, \tilde{x}_{i}$ (and the same $\matA, \vecz$).
+By a routine hybrid argument, the two forms of the problem are
+equivalent, up to a $\poly(n)$ factor in the distinguishing advantage.
+We use this amortized form of the problem in our security proof in
+Section~\ref{sec:KDMCPAscheme}.
+
+\paragraph{Prior hardness results, and an attack.}
+
+As observed in~\cite{DBLP:conf/crypto/ONeillPW11} (and implicitly in
+prior works such
+as~\cite{DBLP:conf/innovations/GoldwasserKPV10,DBLP:conf/tcc/DodisGKPV10}),
+there is a straightforward reduction from $\lwe$ with error
+distribution $\chi=D_{\Z,\alpha q}$ to extended-$\lwe$ where $\tau$ is
+any $m$-fold product distribution with variance $r^{2}$, if the ratio
+$\beta/(r \alpha)$ is superpolynomial in $n$.  In fact, in this
+setting we can securely give out an \emph{unbounded} polynomial number
+of hints $\vecz_{i}, b'_{i} = \inner{\vecx,\vecz_{i}} + \tilde{x}_{i}$
+about the error vector $\vecx$.  (Note that this is different from the
+amortized problem because all the hints are about the same error
+$\vecx$.)  The reason is that by Lemma~\ref{sumplusgaussian}, the
+noise terms $\tilde{x} \gets D_{\Z, \beta q}$ statistically hide the
+inner product $\inner{\vecx, \vecz}$, since the latter has magnitude
+$\approx r\length{\vecx} \leq r \alpha q \sqrt{m} = \beta q \cdot
+\negl(n)$.  As a result, the reduction can just simulate the hints
+$(\vecz, \inner{\vecx, \vecz} + \tilde{x})$ on its own.  The
+disadvantage of this approach is that in order to be useful, the
+modulus $q$ and inverse error rate $1/\alpha$ typically must be
+super-polynomial in~$n$, which corresponds to assuming the worst-case
+hardness of lattice problems for super-polynomial approximation
+factors and running times.
+
+% \cnote{I can't tell what reduction this next paragraph is referring
+%   to??}
+
+% Alternatively, one could use the reduction given
+% in~\cite{DBLP:conf/tcc/DodisGKPV10} from $\lwe$ in dimension $n/2$ to
+% a problem that is syntactically similar to extended-$\lwe$ in
+% dimension $n$.  However, this reduction doubles the dimension $n$ and
+% requires that the hint distribution to be uniformly random over
+% $\bit^{n+m}$ so that it has \emph{exactly} $n/2$ ones, which is
+% unsuitable as we use this short vector as an $\lwe$ secret in the
+% proof and thus require it to have a Gaussian distribution.
+
+We also point out that for certain parameters, there is an efficient
+attack on extended-\lwe when too many hints (about the same $\vecx$)
+are given out.  Specifically, suppose $\tau$ is ``subgaussian'' (e.g.,
+is bounded, or is a discrete Gaussian distribution) with variance $r$,
+and the ratio $\beta q/r$ (which upper bounds $\beta/(r \alpha)$ in
+the typical case where $\alpha q \geq 1$) is polynomial in $n$.  Then
+if a sufficiently large $h = \poly(n)$ number of hints are given out,
+there is an efficient attack that recovers $\vecx$ from the hints
+alone, which trivially allows for solving the extended-\lwe problem.
+To see this, view the $h$ hints as $(\matZ \in \Z^{m \times
+  h},\vecy^{t} := \vecx^{t} \matZ+\tilde{\vecx}^{t})$.  With
+overwhelming probability, the singular values of $\matZ$ will all be
+$r \cdot \Omega(\sqrt{h} - C\sqrt{m})$ for some universal constant $C
+> 0$ (see~\cite[Theorem
+5.39]{vershynin11:_introd_to_non_asymp_analy}).  Thus, for
+sufficiently large $h = \poly(n)$, with overwhelming probability the
+singular values of the right-inverse $\matZ^{+} \in \R^{h \times m}$
+of~$\matZ$ will all be small enough so that $\round{\tilde{\vecx}^{t}
+  \cdot \matZ^{+}}=\veczero$.  As a result, we can compute $\round{
+  \vecy^{t} \matZ^{+} } = \vecx^{t}$.
+
+\iflncs
+
+In the full version, we contrast our results for extended-\lwe
+with syntactically similar (but qualitatively different) results, such
+as the Goldreich-Levin theorem and those
+of~\cite{DBLP:conf/innovations/GoldwasserKPV10,DBLP:conf/tcc/DodisGKPV10}.
+
+
+\else
+
+\fi
+
+\jnote{Additions here. I figure we might as well write it out in some 
+detail, so we'll put most of it in the Appendix}
+
+\subsection{Reduction from $\lwe$}
+\label{sec:reduct-from-lwe}
+
+Here we give a tight reduction from standard $\lwe$ to
+extended-$\lwe$, which holds for the same parameters $n, q, \chi, m
+\geq n+\omega(\log n)$ in the two problems, and in which \emph{no
+  noise} is added to the hint $\inner{\vecz, \vecx}$ (i.e.,
+$\beta=0$).  Our reduction imposes one requirement on the parameters:
+for $\vecx \gets \chi^{m}$ and $\vecz \gets \tau$, we need it to be
+the case that $\abs{\inner{\vecx,\vecz}} < p$ with overwhelming
+probability, where $p$ is the smallest prime divisor of the modulus
+$q$.  For example, if $\chi=D_{\Z, \alpha q}$ and $\tau=D^{m}_{\Z,r}$,
+by standard tail inequalities it suffices to have $\alpha q \cdot r
+\sqrt{m+n} \cdot \wsln < p$.  In other words, the \lwe inverse error
+rate is $1/\alpha > (q/p) \cdot r\sqrt{m+n}$, which is only polynomial
+in $n$ when $q, r, m$ are.
+
+\begin{theorem}
+  \label{thm:ext-lwe-hard}
+  There exists a probabilistic polynomial-time oracle machine (a
+  simulator) $\Sim$ such that for any adversary $\Adv$,
+  \[\mathbf{Adv}_{\lwe}(\Sim^{\Adv}) \geq
+  \tfrac{1}{2p-1} \cdot \mathbf{Adv}_{\elwe}(\Adv) - \negl(n), \]
+  where the parameters of the $\lwe$ and extended-$\lwe$ problems
+  satisfy the condition specified above.
+\end{theorem}
+
+
+
+\begin{proof}
+  For the proof it is convenient to use the equivalent ``knapsack''
+  form of \lwe, which is: given $\matH \gets \Zq^{(m-n) \times m}$ and
+  $\vecc \in \Zq^{m-n}$, where $\vecc$ is either $\vecc=\matH \vecx$
+  for $\vecx \gets \chi^{m}$, or is uniformly random and independent
+  of $\matH$, determine (with non-$\negl(n)$ advantage) which is the
+  case.  The extended form of the problem also reveals a hint $(\vecz,
+  \inner{\vecx,\vecz}+\tilde{x})$, analogously to extended-\lwe.  The
+  equivalence between \lwe and its knapsack form for $m \geq
+  n+\omega(\log n)$, which also applies to their extended versions,
+  has been noticed in several prior works; a proof appears
+  in~\cite[Lemmas 4.8 and 4.9]{DBLP:conf/crypto/MicciancioM11}.
+
+  The reduction $\Sim$ works as follows.  It receives an \lwe instance
+  (in knapsack form) $\matH \in \Zq^{(m-n) \times m}, \vecc \in
+  \Zq^{m-n}$.  It samples $\vecz \gets \tau$, $\vecx' \gets \chi^{m}$,
+  and $\vecv \gets \Zq^{m-n}$, then lets
+  \[\matH' := \matH - \vecv \vecz^{t} \in \Zq^{(m-n) \times m}, \quad
+  \vecc' = \vecc - \vecv \cdot \inner{\vecz, \vecx'} \in \Zq^{m-n}. \]
+  It sends $(\matH', \vecc', \vecz, \inner{\vecx', \vecz})$ to $\Adv$
+  (an adversary for extended-\lwe in knapsack form), and outputs what
+  $\Adv$ outputs.
+
+  We now analyze the behavior of $\Sim$.  First consider the case
+  where $\matH, \vecc$ are uniform and independent.  Then it is clear
+  that $\matH', \vecc'$ are as well, and both $\vecx'$ and $\vecz$ are
+  also chosen exactly as in $\textsf{ExptUnif}$, so $\Sim$ perfectly
+  simulates $\textsf{ExptUnif}$ to $\Adv$.
+
+  Now, consider the case where $\matH, \vecc$ are drawn from the
+  knapsack distribution, with $\vecc=\matH \vecx$ for $\vecx \gets
+  \chi^{m}$.  In this case, we have that $\matH'$ is uniformly random
+  (solely over the choice of $\matH$), and \[ \vecc' = \matH \vecx -
+  \vecv \cdot \inner{\vecz, \vecx'} = \matH' \vecx + \vecv \cdot
+  \inner{\vecz, \vecx-\vecx'}. \] So in the event that $\inner{\vecx',
+    \vecz}=\inner{\vecx, \vecz}$, we have $\vecc'=\matH' \vecx$ and so
+  $\Sim$ perfectly simulates $\textsf{ExptLWE}$ to $\Adv$.  Whereas if
+  $\inner{\vecz, \vecx-\vecx'}$ is a unit modulo $q$, then for any
+  fixed choice of $\matH'$, $\vecz$, $\vecx$, and $\vecx'$, we have
+  that $\vecc'$ is uniformly random over the choice of $\vecv$ alone.
+  Finally, since $\vecx$ and $\vecx'$ are identically distributed, it
+  follows that $\Sim$ perfectly simulates $\textsf{ExptUnif}$ to
+  $\Adv$.
+
+  It remains to analyze the probabilities that $\inner{\vecz,
+    \vecx-\vecx'}$ is zero or a unit (modulo $q$), respectively.
+  First, by assumption $\abs{\inner{\vecz, \vecx-\vecx'}} < p$ with
+  overwhelming probability, so exactly one of the two cases holds.
+  Moreover, we have $\inner{\vecx, \vecz} = \inner{\vecx',\vecz}$ with
+  probability at least $\frac{1}{2p-1} - \negl(n)$ because $\vecx$ and
+  $\vecx'$ are independent.  The theorem then follows from a routine
+  calculation.
+\end{proof}
+
+\paragraph{Connection to Impagliazzo-Naor.} 
+
+It is worth noting that our proof is very similar to Impagliazzo and
+Naor's proof~\cite{DBLP:journals/joc/ImpagliazzoN96} that the
+subset-sum function (over certain additive groups, and with
+appropriate parameters) is a pseudorandom generator if it is one-way.
+The proof of~\cite{DBLP:journals/joc/ImpagliazzoN96} reduces guessing
+the Goldreich-Levin predicate $\inner{\vecz,\vecx} \bmod 2$ (for
+$\vecz \gets \bit^{m}$) to distinguishing the subset-sum function's
+output (on input $\vecx \gets \bit^{m}$) from uniformly random.  But
+in fact, their proof does slightly more: it reduces guessing the value
+of the inner product $\inner{\vecr,\vecx}$ \emph{over the integers} to
+the distinguishing problem; this corresponds with the hint in the
+extended-\lwe problem.  In both their proof and ours, the reduction
+guesses the value of the inner product; whether the guess is correct
+determines whether the subset-sum/knapsack instance is further
+randomized or not.  Our reduction, however, is from the decisional
+knapsack (not Goldreich-Levin) problem; it also needs to provide a
+properly distributed hint $(\vecz, \inner{\vecz,\vecx})$ to the
+distinguisher, which is why it chooses $\vecz$ and a supplementary
+$\vecx'$ error vector itself.
+
+\paragraph{Normal form.}
+
+In our cryptosystems, we need to assume the hardness of extended-\lwe
+in ``normal form'' (as
+in~\cite{MR09:_post_quant_crypt,DBLP:conf/crypto/ApplebaumCPS09}),
+where the secret $\vecs \gets \chi^{n}$ is drawn from the \emph{error}
+distribution, the matrix $\matA$ and vector $\vecb^{t}$ have $m-n$
+columns, and the hint is of the form $\vecz \gets \tau$,
+$b'=\inner{(\vecs,\vecx), \vecz} \in \Z$.  Suppose $m$ is sufficiently
+large so that a uniformly random matrix from $\Zq^{n \times m}$
+contains an invertible $n$-by-$n$ submatrix with overwhelming
+probability.  Then the reduction
+from~\cite{MR09:_post_quant_crypt,DBLP:conf/crypto/ApplebaumCPS09}
+applies to extended-\lwe in this form, with the slight modification
+that \lwe samples in the first phase are never ``thrown away'' but are
+instead recycled to the second phase.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "kdm-ibe"
+%%% End: 

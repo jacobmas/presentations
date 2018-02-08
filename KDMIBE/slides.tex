@@ -1,0 +1,196 @@
+% hack to deal with beamer/pgf bug
+\RequirePackage{atbegshi}
+
+\documentclass{beamer}% This is the file main.tex
+
+
+\input{bbhead}
+\input{lrhead}
+\input{vecmathead}
+\input{beamhead}
+\input{slideshead} % commands for these slides only 
+\input{tikzhead}
+
+\input{latthead}
+\input{crypthead}
+\title{Circular and KDM Security for Identity-Based Encryption}
+
+\newif\ifnotes\notesfalse
+
+\ifnotes
+\newcommand{\jnote}[1]{{\bf (\color{red}{Jacob:}} {#1}{\bf ) }}
+\newcommand{\cnote}[1]{{\bf (\color{blue}{Chris:}} {#1}{\bf ) }}
+\else
+\newcommand{\jnote}[1]{}
+\newcommand{\cnote}[1]{}
+\fi
+
+\author{%
+  Jacob Alperin-Sheriff\footnotemark[1]  %
+  %
+}
+\institute{\footnotemark[1]based on work with Chris Peikert}
+\date{\today}
+\begin{document}
+\begin{frame}[label=title]
+\titlepage
+\end{frame}
+\input{slides_intro}
+\input{slides_contrib}
+\input{slides_dual}
+\input{slides_extlwe}
+
+ 
+
+
+
+
+
+
+
+\begin{frame}{All-but-$d$ trapdoors}
+
+ %  \begin{block}{\onslide*<1-2| handout: 0>{The \inlinecite{MP'12} construction}
+%       \onslide*<3-|handout:1>{All-but-$d$ trapdoors}}
+%    \begin{overlayarea}{\textwidth}{3.5cm}
+%       \onslide*<1|handout:0>{\centering $\overbrace{\text{matrix
+%           }\matG}^{\text{fixed gadget}}, \quad \overbrace{\text{short
+%           }\short{\matR}}^{\text{trapdoor}},\quad
+%         \overbrace{\unif{\matA},
+%           \tilde{\matA}=-\unif{\matA}\short{\matR}}^{\text{public
+%             key}}$\\} \onslide*<2|handout:0>{\centering
+%         $\overbrace{\text{matrix }\matG}^{\text{fixed gadget}}, \quad
+%         \overbrace{\text{short }\short{\matR}}^{\text{trapdoor}},\quad
+%         \overbrace{\unif{\matA},
+%           \tilde{\matA}=-u^{*}\matG-\unif{\matA}\short{\matR}}^{\text{public
+%             key}}$\\} \onslide*<3|handout:0>{\centering $
+%         \overbrace{\text{matrix }\matG}^{\text{fixed gadget}},\quad
+%         \overbrace{\text{short }\short{\matR}}^{\text{trapdoor}},\quad
+%         \overbrace{\unif{\matA}
+%           := \begin{bmatrix}\unif{\matA_0}\\\ldots\\\unif{\matA_{d-1}}\\\end{bmatrix},
+%           \quad
+%           \tilde{\matA}=-\unif{\matA}\short{\matR}}^{\text{public
+%             key}}$\\} \onslide*<4-|handout:1>{\centering $
+%         \overbrace{\text{matrix }\matG}^{\text{fixed gadget}},\quad
+%         \overbrace{\text{short }\short{\matR}}^{\text{trapdoor}},\quad
+%         \overbrace{\unif{\matA}
+%           = \begin{bmatrix}\unif{\matA_0}\\\ldots\\\unif{\matA_{d-1}}, \end{bmatrix},
+%           \tilde{\matA}
+%           = \begin{bmatrix}\tilde{\matA}_0\\\ldots\\\tilde{\matA}_{d-1}\end{bmatrix},
+%           \tilde{\matA}_i=c_i\matG-\unif{\matA_i}\short{\matR}
+%         }^{\text{public key}}$\\} \smallskip {\centering
+%         \onslide*<1-2|handout:0>{ $\overbrace{\matA_{u} =
+%             [\unif{\matA} \mid u\matG + \tilde{\matA}]}^{\text{tagged
+%               public key}}$} \onslide*<3-|handout:
+%         1>{$\vec{u}^{t}=(u^0, u^1, \ldots, u^{d-1}) \quad
+%           \overbrace{\matA_{u} = [\vec{u}^{t}\unif{\matA} \mid
+%             u^{d}\matG + \vec{u}^{t}\tilde{\matA}]}^{\text{tagged
+%               public key}}$} \\}
+% \end{overlayarea}  
+%   \end{block}
+
+  \begin{itemize}
+  \item<+-> Recall \inlinecite{MP'12} trapdoor construction with
+    \inlinecite{ABB'11} IBE scheme tags for identities:\\
+
+    \begin{itemize}
+    \item<.-> Real: can invert trapdoor function for any identity $u$.
+    \item<+-> ``Punctured:" Can embed challenge at identity $u^*$, invert
+      trapdoor elsewhere\jnote{Insert cool overlay}
+    \end{itemize}
+\item<+-> This works for regular IBE, where only the one challenge
+  identity is needed
+\item<+-> For our scheme, we have a clique of $d$ identity challenges
+  to embed
+  \item<+-> All-but-$d$ trapdoors \inlinecite{CS'06,HLOV'11}:
+    \begin{itemize}
+    \item<.-> ``Punctured'' at $d$ arbitrary tags ($u_1^*,\ldots,
+      u_d^*$)
+    \item<.-> Embeds a degree-$d$ polynomial $f$ with zeros at the
+      tags
+    \item<.-> Public key becomes $d^2$ times larger
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+
+%\jnote{Definitions}
+%\begin{frame}{KDM Security Model for Identity-Based Encryption}
+%  \begin{itemize}
+%  \item Selective-identity model of security for IBE
+%    \begin{itemize}
+%    \item<.-> Adversary provides challenger set $\calI$ of identities
+%      it will be targeting \alert{before} seeing public parameters or
+%      making queries
+%    \end{itemize}
+%  \item Secret key \alert{extraction} queries allowed for
+%    identities not in $\calI$
+%  \item Allowed \alert{key-dependent messages queries} are:
+%    \begin{itemize}
+%    \item<.-> from the family $\calF$ of \alert{affine functions} of
+%      \alert{secret keys for identities} in the set $\calI$
+%    \item Queries are of the form $(f_0, f_1, i)$, where $f_0, f_1
+%      \in \calF$ (set of allowed functions), $i \in \calI$ (set of
+%      target identities)
+%    \item Challenger responds with encryption of $f_{b}$ under
+%      identity $i$, where $b \in \{0,1\}$
+%    \end{itemize}
+%  \item For security, adversary must be unable to distinguish
+%    between case where $b=0$ and case where $b=1$ \jnote{Add equation
+%      or does it just make it ugly}
+%  \end{itemize}
+%\end{frame}
+  
+
+
+%\begin{frame}{KDM-Secure IBE Scheme}
+%  \begin{block}<+->{The Construction}
+%    \begin{description}
+%    \item[Gen$(1^{n}, d)$] Choose\\
+%      {\centering $\overbrace{(\unif{\matA}, \tilde{\matA},
+%          \unif{\vecy})}^{\text{all-but-}d\text{ public key}}, \quad
+%        \overbrace{(\short{\matR})}^{\text{trapdoor}}$ \\}
+%    \item[Ext$(msk,u)$] Use trapdoor to sample $sk_{u}$ for
+%      tag-induced $pk=(\matA_{u}, \vecy_{u})$ of public-key KDM scheme
+%    \item[Enc$(mpk, u, \mu)$] As in public key scheme, for tag-induced
+%       $pk=(\matA_{u},\vecy_{u})$ 
+%     \item[Dec$(sk_{u}, \vecc)$] As in public key scheme \smallskip
+%    \end{description}
+%  \end{block}
+%  \begin{itemize}
+%  \item<+-> Security:
+%    \begin{enumerate}
+%    \item<.->Use all-but-$d$ trapdoor construction to ``puncture"
+%      public key at $d$ challenge identities
+%    \item<+-> Embed public-key scheme so KDM security of IBE follows
+%      from KDM security of public-key scheme
+%    \end{enumerate}
+%  \end{itemize}
+%\end{frame}
+
+\begin{frame}{Open Problems}
+  \begin{itemize}
+  \item<+-> Prove circular security for quadratic functions of secret key
+    \begin{itemize}
+    \item<+-> Our proof (and other work) was for affine functions \smallskip
+    \item<+-> Quadratic functions would be major step towards proving
+      security of fully homomorphic encryption without ad-hoc circular
+      security assumptions
+    \end{itemize}
+  \item<+-> All-but-\alert{many} trapdoors \inlinecite{Hof'12} from lattices
+    \item<+-> Security for key-dependent messages of the master secret
+    key
+    \begin{itemize}
+    \item<.-> As noticed in \inlinecite{GHV'12}, would give KDM-CCA
+      scheme via standard CCA-from-IBE reduction \inlinecite{BCHK'04}
+    \item<.-> But known schemes only work for bounded number of
+      challenge ciphertexts
+    \end{itemize}
+  \end{itemize}
+
+  \medskip
+  \onslide<7->{\centering \Large Any questions?\\}
+\end{frame}
+
+
+\end{document}

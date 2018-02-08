@@ -1,0 +1,284 @@
+\section{KDM-CPA Secure Public-Key Scheme}
+\label{sec:KDMCPAscheme}
+
+Here we present a ``dual''-style \lwe cryptosystem that is KDM-CPA
+secure for affine functions of the secret keys.  In fact, by setting
+the parameters appropriately, the construction and security proof also
+encompass (a slight variant of) the cryptosystem
+from~\cite{DBLP:conf/ctrsa/LindnerP11}, which has somewhat smaller
+keys and ciphertexts than ``primal'' or ``dual'' systems.  In
+Section~\ref{sec:Construction} we build a KDM-CPA secure IBE around
+this system.
+
+\subsection{Construction}
+
+The cryptosystem involves a few parameters: a modulus $q=p^2$ for a
+prime $p$ where the message space is~$\Zp$; integer dimensions $n, m$
+relating to the underlying \lwe problems; and a Gaussian parameter $r$
+for key generation and encryption.  To make embedding this scheme into
+our IBE more natural, $\pkcgen$ includes an additional parameter $d$,
+which will be used to specify the size of identity cliques in the IBE
+scheme, and outputs public keys $\matA$ that are $md$ columns wide.  In
+the public-key scheme alone, the value $d$ is unrelated to the number
+of public keys that the adversary can obtain in an attack (which 
+will be denoted as $\ell$ below and is
+unbounded), and we would just fix $d=1$.
+
+\begin{itemize}[itemsep=0pt]
+\item $\pkcgen(1^n, d)$: choose $\matA \in \Zq^{n \times md}$,
+  $\vecz_{0} \gets D_{\Z,r}^{n}$, $\vecz_{1} \gets D_{\Z,
+    r}^{md}$, and let $\vecy = \vecz_{0}-\matA\vecz_{1} = [\matI_{n}
+  \mid -\matA] \vecz \in \Zq^{n}$ where $\vecz=(\vecz_{0}, \vecz_{1})
+  \in \Z^{n+md}$.  The public key is $(\matA, \vecy)$ and the secret
+  key is $\vecz_{1}$.
+
+  (Notice that, unlike the dual-style encryption
+  of~\cite{DBLP:conf/stoc/GentryPV08}, but like the scheme
+  of~\cite{DBLP:conf/ctrsa/LindnerP11}, the public key component
+  $\vecy$ is a \emph{perturbed} value of $-\matA \vecz_{1}$.  This
+  will be important in the proof of KDM security.)
+ 
+\item $\pkcenc(\matA, \vecy, \mu)$: to encrypt a message $\mu \in
+  \Zp$, choose $\vecx_{0} \gets D_{\Z,r}^{n}$, $\vecx_{1} \gets
+  D_{\Z, r}^{md}$ and $x' \gets D_{\Z, r}$.  Output the
+  ciphertext $\vecc^t =\vecx_{0}^t[\matA \mid \vecy] + [\vecx_{1}^t
+  \mid x'] + [\veczero \mid p\cdot\mu] \in \Zq^{1 \times (md+1)}$.
+
+\item $\pkcdec(\vecz_{1}, \vecc)$: Compute $\mu' = \vecc^t \left[
+    \begin{smallmatrix}
+      \vecz_{1} \\ 1
+    \end{smallmatrix} \right] \in \Zq$.  Output the $\mu \in \set{0,
+    \ldots, p-1} = \Zp$ such that $\mu'$ is closest to $(p \mu)$ mod
+  $q$.
+\end{itemize}
+
+\subsection{Parameters and Correctness}
+
+For the public-key system alone, it suffices to take $m \geq n$ by our
+use of the extended-\lwe assumption and its proof of hardness as in
+Section~\ref{sec:extended-lwe}.  When embedding the system into an IBE
+scheme, however, we will use $m=\Theta(n \log q)$ because we need the
+public parameters to be statistically close to uniform over the choice
+of the master secret key.  The error parameter $r$ must be small
+enough (relative to $q/p$) so that decryption is correct with
+overwhelming probability, but large enough to satisfy the reductions
+to \lwe from worst-case lattice
+problems~\cite{DBLP:journals/jacm/Regev09,DBLP:conf/stoc/Peikert09};
+for the latter purpose, $r \geq 2\sqrt{n}$ suffices.  (Note that even
+if part of the security proof relies on \lwe in dimension $> n$, this
+problem is no easier than \lwe in dimension $n$, and so we can still
+securely use $r=2\sqrt{n}$ with the larger dimension.)
+
+Here we give some example bounds.  Let $r=2\sqrt{n}$, let \[ p = r^{2}
+\sqrt{n + md} \cdot \wsln = n\sqrt{n + md} \cdot \wsln, \] and let
+$q=p^2$.  Then decryption is correct except with probability
+$\negl(n)$: let $(\matA, \vecy, \vecz) \gets \pkcgen(1^n, d)$.  For a
+ciphertext $\vecc \gets \pkcenc(\matA, \vecy, \mu)$, we have
+\[ \vecc^t \left[
+  \begin{smallmatrix}
+    \vecz_{1} \\ 1
+  \end{smallmatrix} \right] = \vecx_{0}^t\matA\vecz_{1} +
+\inner{\vecx_{1},\vecz_{1}} + \inner{\vecx_{0},\vecy} + x' + p\cdot\mu
+= \inner{\vecx_{0}, \vecz_{0}} + \inner{\vecx_{1},\vecz_{1}} + x' +
+p\cdot\mu \bmod q,\] so decryption is correct whenever
+$\abs{\inner{\vecx_{0},\vecz_{0}}+\inner{\vecx_{1},\vecz_{1}} + x'} <
+p/2$.  By known tail bounds on discrete Gaussians, this bound holds
+except with probability $\negl(n)$ (over the choice of all the random
+variables), as required.
+
+\subsection{Proof of Security}
+
+\begin{theorem}
+  \label{thm:KDMCPATheorem}
+  The above cryptosystem is KDM-CPA secure with respect to the set of
+  affine functions over $\Zp$, under the extended-\lwe assumption for
+  parameters described above.
+\end{theorem}
+
+
+\begin{proof}
+  We proceed by a series of indistinguishable games. We begin with the
+  real KDM-CPA attack game as defined in Section~\ref{subsec:KDM},
+  where $\beta \in \bit$ is arbitrary. We then eventually transition
+  to a game which proceeds in a manner independent of the value of
+  $\beta$, thus proving computational indistinguishability between the
+  attack games for $\beta=0$ and $\beta=1$.  Since we are describing
+  the games for an arbitrary value of $\beta$, we let $f=f_{\beta}$
+  denote the function of the secret key that is encrypted in each
+  ciphertext query.
+
+  We will be denoting affine functions over $\Z_p$ of the $\ell$
+  users' secret keys $\vecz_{1,1}, \ldots, \vecz_{\ell,1}$ as
+  \[f_{\matV, w}(\matZ) := \sum_{j \in [\ell]} \inner{\vecv_j, \vecz_{j,1}}+w
+  \bmod p, \text{ where } \matV = \begin{bmatrix}\vecv_1 \ldots
+    \vecv_{\ell}\end{bmatrix}, \matZ = \begin{bmatrix}\vecz_{1,1}, 
+    \ldots, \vecz_{\ell,1}\end{bmatrix} \in \Zp^{md \times \ell}\] throughout
+  the proof.
+
+  \paragraph{Game 0.} \label{KDMCPAAttackGame} This is the actual
+  attack game. We do everything normally, generating public keys
+  $(\matA_{i}, \vecy_{i})$ with secret keys $\vecz_{i,1}$ for any
+  number of users, and encrypt affine functions $f_{\matV,w}$ of the
+  users' secret keys under the public key for user $i$ as
+  \[\vecc^t =\vecx_{0}^t[\matA_i \mid \vecy_i] + [\vecx_1^t \mid x']
+  + [\veczero \mid p\cdot f_{\matV, w}(\matZ)].\]
+
+  \paragraph{Game 1.} \label{KDMCPAasLWE} In this game we rewrite the
+  way we respond to each key-dependent message query $f_{\matV,w}(\matZ)$, so
+  that the response has exactly the same distribution, but it is
+  constructed to syntactically match the \textsf{ExptLWE} experiment
+  in the (amortized, normal form) extended-$\lwe$ problem.  Looking
+  ahead, in Game 2 we will switch the form of the ciphertexts to match
+  the \textsf{ExptUnif} experiment.
+
+  For each user $i$, we proceed as in \textsf{ExptLWE} with parameters
+  error distribution $\chi:=D_{\Z,r}$, extra noise $\beta:=0$, and the
+  same $r$ as in the cryptosystem.  That is, we choose $\matA_{i}
+  \gets \Zq^{n \times md}$ and $\vecz_{i} \gets D_{\Z, r}^{n+md}$,
+  parsing it as $\vecz_{i}=(\vecz_{i,0},\vecz_{i,1}) \in \Z^{n} \times
+  \Z^{md}$.  We let $\vecy_{i} = [\matI_{n} \mid -\matA_{i}] \vecz_{i}
+  = \vecz_{i,0}-\matA_{i} \vecz_{i,1}$, giving user $i$'s public key
+  $(\matA_{i}, \vecy_{i})$ to the adversary.  (As expected,
+  $\vecz_{i,1}$ is the secret key for user~$i$.)
+
+  For handling later ciphertext queries, we also (lazily) generate an
+  unbounded number of \lwe vectors $\vecb$, with hints $b'$, of the
+  form \[ \vecb^{t} := \vecx_{0}^{t} \matA_i + \vecx_{1}^{t} \in
+  \Z_q^{1 \times md}, \quad b' := \inner{\vecx, \vecz_{i}} \in \Z, \]
+  where $\vecx = (\vecx_{0},\vecx_{1}) \gets D_{\Z,r}^{n+md}$ is
+  freshly chosen for each $\vecb$, and are amortized over the same
+  fixed $\matA_{i}$, $\vecz_{i}$ chosen above.
+  
+  To answer a query to encrypt $f_{\matV,w}$ under user $i$'s public
+  key, we generate a fresh $\vecb$ with hint $b'$ as above, choose $x'
+  \gets D_{\Z, r}$ as usual, and return to the adversary the
+  ciphertext
+  \[\vecc^t = [\vecb^t \mid -\inner{\vecb, \vecz_{i,1}} + b' + x' +
+  p\cdot f_{\matV, w}(\matZ)]. \]
+
+  We now show that the responses to the KDM queries in this game are
+  distributed exactly the same as in the previous game.  To see this,
+  simply observe that each ciphertext
+  \begin{align*}
+    \vecc^{t} &= [\vecb^t \mid -\inner{\vecb, \vecz_{i,1}} +
+    b' + x' + p\cdot f_{\matV, w}(\matZ)] \\
+    &= [\vecx_{0}^{t} \matA_{i} + \vecx_{1}^{t} \mid -(\vecx_{0}^{t}
+    \matA_{i} + \vecx_{1}^{t}) \vecz_{i,1} + \inner{\vecx, \vecz_{i}}
+    + x' + p\cdot f_{\matV, w}(\matZ)] \\
+    &= [\vecx_{0}^{t} \matA_{i} + \vecx_{1}^{t} \mid \inner{\vecx_{0},
+      \vecy_{i}} + x' + p\cdot f_{\matV, w}(\matZ)],
+  \end{align*}
+  which has the same distribution as in Game 0.
+
+  \paragraph{Game 2.} This game is exactly like Game 1, except that
+  instead of using \textsf{ExptLWE}, we instead use \textsf{ExptUnif},
+  i.e., we choose the vectors $\vecb$ uniformly at random (but still
+  choose the vectors $\vecx$ for generating the hints
+  $b'=\inner{\vecx,\vecz_{i}}$).  Responses to key-dependent message
+  queries are still generated as
+  \[\vecc^t = [\vecb^t \mid -\inner{\vecb,
+    \vecz_{i,1}} + x' + b' + p\cdot f_{\matV, w}(\matZ)].\] Under the
+  extended-\lwe assumption, and hence under the standard $\lwe$
+  assumption with appropriate parameters (by
+  Theorem~\ref{thm:ext-lwe-hard}), this game is computationally
+  indistinguishable from Game 1.
+
+  \paragraph{Game 3.} In this game, we use the \lwe distribution
+  transformation from~\cite{DBLP:conf/crypto/ApplebaumCPS09} (our
+  Lemma~\ref{LWEtransformation}) to answer key-dependent queries
+  without needing to use the secret keys $\vecz_{i,1}$ explicitly.  We
+  begin with oracle access to $A_{\vect, \chi}$ (where $\vect \gets
+  \Zq^{md}$, $\chi=D_{\Z, r}$).  We apply the transformation for each
+  $i$, yielding oracle access to distributions $A_{\vecz_{i,1},\chi}$,
+  where each $\vecz_{i,1}$ is distributed according to $\chi^{md}$.
+  For each user $i$, we sample $A_{\vecz_{i,1},\chi}$ a total of $n$
+  times to get $(-\matA_i \in \Zq^{n \times md}, \vecy_i =
+  \vecz_{i,0}-\matA_i\vecz_{i,1})$, and set the public key for user
+  $i$ to be $(\matA_i, \vecy_i)$.  (We write $-\matA_i$ instead of
+  $\matA_i$ so that $\vecy_i$ has the same form with respect to
+  $\matA_{i}$ as it does in the actual encryption scheme.)
+
+  As in~\cite{DBLP:conf/crypto/ApplebaumCPS09}, we use the auxiliary
+  information output by the \lwe transformation to construct for all
+  users $i,j$ a linear relation between the (unknown) secret keys
+  $\vecz_{i,1}$, $\vecz_{j,1}$, i.e., an invertible matrix
+  $\matT_{i,j} \in \Zq^{md \times md}$ and vector $\vecw_{i,j} \in
+  \Zq^{md}$ such that
+  \begin{equation}
+    \label{transformeq}
+    \vecz_{j,1} = \matT_{i,j}^{t} \cdot \vecz_{i,1}+\vecw_{i,j} \bmod q.
+  \end{equation}
+
+  \jnote{Using the tilde for the re-written queries rather than a '
+    symbol because using the prime symbol makes the transposes look
+    ugly} To simplify notation below, we will use this transformation
+  to re-write an arbitary affine function query $f_{\matV,w}(\matZ)$
+  as a function of any 
+  $\vecz_{i,1}$ alone. Letting $\tilde{\vecv}_i=\sum_{j \in
+    [\ell]}(\matT_{i,j}\vecv_j) \bmod p$, $\tilde{w}_i =\sum_{j \in
+    [\ell]}\inner{\vecv_j, \vecw_{i,j}}+w \bmod p$, we have that
+\[f_{\matV, w}(\matZ)= \sum_{j
+    \in [\ell]}\inner{\vecv_j,\vecz_{j,1}}+w = 
+\sum_{j \in [\ell]}(\inner{\matT_{i,j}\vecv_j, \vecz_{i,1}} + \inner
+{\vecv_{j}, \vecw_{i,j}}+w)=\inner{\tilde{\vecv}_{i}, \vecz_{i,1}}+\tilde{w}_{i}.\] 
+
+To respond to a query for an encryption of $f_{\matV,w}(\matZ)$ under
+the public key for user~$i$, we draw a fresh $(-\vecb_0, b_1) \gets
+A_{\vecz_{i,1}, \chi}$.  Next, we choose a fresh
+$\vecx=(\vecx_{0},\vecx_{1}) \gets D_{\Z, r}^{n+md}$.  We output the
+ciphertext
+  \[\vecc^t = [\vecb_0^t + (\vecx_{0}^{t}\matA_{i} + \vecx_{1}^{t})
+  + p \cdot \tilde{\vecv}_{i}^{t} \mid b_1 +
+  \inner{\vecx_{0}, \vecy_i} + p \cdot \tilde{w}_{i}].\]
+
+  We claim that these ciphertexts are distributed identically to those
+  in Game 2.  To show this, we let $\vecb^t = \vecb_0^t +
+  (\vecx_{0}^{t}\matA_{i}+\vecx_1^{t}) + p \cdot
+  \tilde{\vecv}_{i}^t$.  Since $\vecb_0$ is uniform (by the
+  definition of $A_{\vecz_{i,1}, \chi}$), $\vecb$ in this game is
+  uniform over the choice of $\vecb_0$ alone, just as in Game 2.
+  % Now, taking the
+  % inner product of $\vecb$ and $\vecz_i$, we have by
+  % Equation~\eqref{transformeq} that
+  % \begin{equation}
+  %   \label{transformitoj}
+  %   -\inner{\vecb,\vecz_i} = -\inner{\vecb_0,\vecz_i}-p
+  %   \cdot\inner{\matT_{i,j}\vecv,\vecz_i} =
+  %   -\inner{\vecb_0,\vecz_i}-p \cdot
+  %   \inner{\vecv,\vecz_j}+p\cdot\inner{\vecv,\vecw_{i,j}}.
+  % \end{equation}
+  Next, since $b_{1}=-\inner{\vecb_{0}, \vecz_{i,1}}+x'$ for $x' \gets
+  D_{\Z,r}$, we can rewrite the ciphertext constructed in this game as
+  \begin{align*}
+    \vecc^{t} &= [\vecb^{t} \mid \inner{-\vecb + (\matA_i^{t}
+      \vecx_{0} + \vecx_{1}) + p \cdot \tilde{\vecv}_{i}, \vecz_{i,1}} +
+    x' + \inner{\vecx_{0}, \vecy_i} + p
+    \cdot \tilde{w}_{i}]\\
+    &= [\vecb^{t} \mid -\inner{\vecb, \vecz_{i,1}} + x' +
+    \inner{\vecx_{0}, \vecy_i+\matA_i\vecz_{i,1}} + \inner{\vecx_{1},
+      \vecz_{i,1}} + p \cdot (\inner{\tilde{\vecv}_{i}, \vecz_{i,1}}+\tilde{w}_{i})]\\
+    &= [\vecb^{t} \mid -\inner{\vecb, \vecz_{i,1}} + x' +
+    \inner{\vecx, \vecz_i} + p \cdot f_{\matV, w}(\matZ)],
+  \end{align*}
+  which is distributed exactly as in Game 2.
+
+  \paragraph{Game 4.} This game is exactly like Game 3, except instead
+  of beginning with oracle access to $A_{\vect, \chi}$ for
+  $\chi=D_{\Z,r}$, we begin with oracle access to $U(\Zq^{md} \times
+  \Zq)$.  Computational indistinguishability from Game 3 follows
+  directly from the hardness of decision-\lwe.
+
+  In this game, the public keys $(\matA_i, \vecy_i)$ are now all
+  uniformly random and independent.  Moreover, since every sample
+  $(\vecb_0, b_1)$ drawn in the game is also truly uniform and
+  independent of everything else in the ciphertexts, all of the
+  responses to key-dependent message queries are just uniformly random
+  and independent vectors.  This makes the game independent of
+  $\beta$, and concludes the proof.
+\end{proof}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "kdm-ibe"
+%%% End: 

@@ -1,0 +1,41 @@
+\newcommand{\bigT}{
+  \begin{bmatrix}
+    \matI & -\matR \\ & \matI
+  \end{bmatrix}
+}
+
+\newcommand{\smallT}{\left[
+    \begin{smallmatrix}
+      \matI & -\matR \\ & \matI
+    \end{smallmatrix} \right]}
+
+\newenvironment{expt}
+{\begin{list}{}{
+  \setlength{\leftmargin}{0.5em}
+  \setlength{\itemsep}{.5pt}
+  \setlength{\parsep}{0pt}
+  \setlength{\parskip}{.5pt}
+  \setlength{\partopsep}{0pt}
+    \setlength{\topsep}{0pt}
+}
+}
+{\end{list}}
+
+\newcommand{\barA}{\ensuremath{\bar{\mathbf{A}}}}
+\newcommand{\tildeA}{\ensuremath{\tilde{\mathbf{A}}}}
+
+
+\newcommand{\barb}{\ensuremath{\bar{\mathbf{b}}}}
+\newcommand{\splithmat}[2]{[#1  \mid  #2]}
+\newcommand{\splitvmat}[2]{\begin{bmatrix}#1 \\ 
+#2\end{bmatrix}}
+
+\newcommand{\Zqvec}[1]{\Z_q^{#1}}
+\newcommand{\Zqmat}[2]{\Z_q^{#1 \times #2}}
+\newcommand{\MPK}{\algo{MPK}}
+\newcommand{\MSK}{\algo{MSK}}
+\newcommand{\TGen}{\algo{TrapGen}}
+\newcommand{\SampleD}{\algo{SampleD}}
+\newcommand{\calR}{\mathcal{R}}
+
+\newcommand{\elwe}{\mathsf{ELWE}}

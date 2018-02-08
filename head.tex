@@ -1,0 +1,59 @@
+% bring in the individual header files
+
+\input{bbhead}
+\input{lrhead}
+\input{vecmathead}
+\input{thmhead}
+\input{comphead}
+\input{latthead}
+\input{crypthead}
+\input{noteshead}
+
+\newcommand{\etal}{\textit{et al.}}
+
+% fix weird spacing of \pmod, and introduce \pmod* command; see
+% http://tex.stackexchange.com/questions/39221/removing-extra-space-with-pmod-command
+\makeatletter
+\renewcommand{\pod}[1]{\mathchoice
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\mkern4mu(#1)}
+  {\mkern4mu(#1)}
+}
+\makeatletter
+\let\@@pmod\pmod
+\DeclareRobustCommand{\pmod}{\@ifstar\@pmods\@@pmod}
+\def\@pmods#1{\mkern4mu({\operator@font mod}\mkern 6mu#1)}
+\makeatother
+
+% some hackery to use individual symbols from mathabx without letting
+% the other ugly math symbols take over:
+% http://tex.stackexchange.com/questions/14386/importing-a-single-symbol-from-a-different-font
+\DeclareFontFamily{U}{mathb}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathb}{m}{n}{
+  <5> <6> <7> <8> <9> <10> gen * mathb
+  <10.95> mathb10 <12> <14.4> <17.28> <20.74> <24.88> mathb12
+}{}
+\DeclareSymbolFont{mathb}{U}{mathb}{m}{n}
+
+\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathx}{m}{n}{
+  <5> <6> <7> <8> <9> <10>
+  <10.95> <12> <14.4> <17.28> <20.74> <24.88>
+  mathx10
+}{}
+\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
+
+\DeclareMathSymbol{\boxplus}      {2}{mathb}{"60}
+\DeclareMathSymbol{\boxminus}     {2}{mathb}{"61}
+\DeclareMathSymbol{\boxtimes}     {2}{mathb}{"62}
+\DeclareMathSymbol{\boxdot}       {2}{mathb}{"64}
+\DeclareMathSymbol{\boxcirc}      {2}{mathb}{"65}
+\DeclareMathSymbol{\boxslash}     {2}{mathb}{"6D}
+\DeclareMathSymbol{\boxbackslash} {2}{mathb}{"6E}
+\DeclareMathSymbol{\bigboxplus}      {1}{mathx}{"D0}
+\DeclareMathSymbol{\bigboxminus}     {1}{mathx}{"D1}
+\DeclareMathSymbol{\bigboxtimes}     {1}{mathx}{"D2}
+\DeclareMathSymbol{\bigboxdot}       {1}{mathx}{"D4}
+\DeclareMathSymbol{\bigboxcirc}      {1}{mathx}{"D5}
+

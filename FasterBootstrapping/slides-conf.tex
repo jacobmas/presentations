@@ -1,0 +1,741 @@
+% hack to deal with beamer/pgf bug
+\RequirePackage{atbegshi}
+
+% "draft" makes compilation faster; remove for final version
+% shadow = put drop shadows behind blocks by default
+% xcolor: svgnames imports lots of color names
+% table allows for multi-color table rows
+% pdftex is the compiler
+\documentclass[shadow,xcolor=pdftex,svgnames,table,t]{beamer}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{array}
+% need to load tikz defs before beamer defs, for some reason
+\input{tikzhead}
+\input{beamhead}
+
+% common stuff
+\input{../latthead}
+\input{../vecmathead}
+\input{../lrhead}
+\input{../bbhead}
+\input{../noteshead}
+
+% trace
+\DeclareMathOperator{\trace}{Tr}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\msb}{msb}
+\renewcommand{\O}{\mathcal{O}}
+\newcommand{\frakp}{\mathfrak{p}}
+\newcommand{\Blue}[1]{{\color{Blue}#1}}
+\newcommand{\Red}[1]{{\color{Red}#1}}
+\newcommand{\Purple}[1]{{\color{Purple}#1}}
+\newcommand{\Green}[1]{{\color{Green}#1}}
+
+% fix weird spacing of \pmod, and introduce \pmod* command; see
+% http://tex.stackexchange.com/questions/39221/removing-extra-space-with-pmod-command
+\makeatletter
+\renewcommand{\pod}[1]{\mathchoice
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\allowbreak \if@display \mkern 18mu\else \mkern 8mu\fi (#1)}
+  {\mkern4mu(#1)}
+  {\mkern4mu(#1)}
+}
+\makeatletter
+\let\@@pmod\pmod
+\DeclareRobustCommand{\pmod}{\@ifstar\@pmods\@@pmod}
+\def\@pmods#1{\mkern4mu({\operator@font mod}\mkern 6mu#1)}
+\makeatother
+%%%% 
+
+\title
+{ Practical Bootstrapping in\\Quasilinear Time
+}
+
+\author
+{ {\Large Jacob Alperin-Sheriff}
+  \and
+  {\Large Chris Peikert}
+}
+
+\institute{School of Computer Science\\Georgia Tech}
+
+\date
+{
+  CRYPTO 2013\\
+  19 August 2013
+}
+
+% restricts presentation to specified frames, for faster compilation;
+% comment out the line to get the entire presentation
+
+%\includeonlyframes{enhance2}
+
+\begin{document}
+
+%%% put less vertical space around displayed equations
+\setlength{\abovedisplayskip}{8pt plus 2pt minus 1pt}
+\setlength{\belowdisplayskip}{8pt plus 2pt minus 0pt}
+\setlength{\abovedisplayshortskip}{0pt plus 2pt}
+\setlength{\belowdisplayshortskip}{8pt plus 2pt minus 1pt}
+
+\begin{frame}[label=title]
+  \titlepage
+\end{frame}
+
+\begin{frame}[label=fhe]{Fully Homomorphic Encryption {\citationsize
+      [RAD'78,Gentry'09]}}
+  \begin{itemize}
+  \item<+-> FHE lets you do this:
+    \begin{center}
+      \begin{tikzpicture}
+       \node (c) {$\fbox{$\mu$}$};
+  
+        \node[right=of c,algorithm=Green] (eval)
+        {$\text{Eval}\parens*{f}$};
+
+        \node[right=of eval] (out) {$\fbox{$f(\mu)$}$};
+
+        \path
+        (c) edge (eval)
+        (eval) edge (out)
+        ;
+      \end{tikzpicture}
+    \end{center}
+    % where $\abs{f(\mu)}$ and decryption time don't depend on
+    % $\abs{f}$.
+
+    \medskip
+    A cryptographic ``holy grail'' with countless applications.
+
+    \medskip Solved in {\citationsize [Gentry'09]}, followed by
+
+    \hfill
+    {\scriptsize [vDGHV'10,BV'11a,BV'11b,BGV'12,B'12,GSW'13,\ldots]}
+  \end{itemize}
+
+  \onslide<+->
+  %\bigskip
+  \begin{itemize}
+  \item ``Naturally occurring'' schemes are \alert<.>{somewhat
+      homomorphic}~(SHE):
+
+    can only evaluate functions of an \alert<.>{\textit{a priori}
+      bounded} depth.
+  \end{itemize}
+
+  \begin{center}
+    \begin{tikzpicture}[node distance=.4cm]
+      \node (c) {$\Green{\fbox{$\mu$}}$};
+      
+      \node[right=of c,algorithm=Green] (eval)
+      {$\text{Eval}\parens*{f}$};
+      
+      \node[right=of eval] (cprime) {$\color{Orange} \fbox{$f(\mu)$}$};
+
+      \node[right=of cprime,algorithm=Green] (eval2)
+      {$\text{Eval}\parens*{g}$};
+
+      \node[right=of eval2] (cdp) {$\Red{\fbox{$g(f(\mu))$}}$};
+
+      \path
+      (c) edge (eval)
+      (eval) edge (cprime)
+      (cprime) edge (eval2)
+      (eval2) edge (cdp)
+      ;
+    \end{tikzpicture}
+  \end{center}
+  \begin{itemize}
+  \item<+-> Thus far, ``\alert{bootstrapping}'' is required to
+    achieve~\alert{unbounded} FHE.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=bootstrapping]{Bootstrapping: SHE $\to$ FHE {\citationsize [Gentry'09]}}
+  \begin{itemize}
+  \item<+-> \alert<.>{Homomorphically evaluates the SHE decryption
+      function} to ``refresh'' a ciphertext $\Red{\fbox{$\mu$}}$,
+    allowing further homomorphic operations.
+
+    \begin{center}
+      \begin{tikzpicture}[every node/.style={node distance=.7cm}]
+        \node (sk)
+        {$\Green{\fbox{$sk$}}$};
+
+        \node[right=of sk,algorithm=Green] (eval)
+        {$\text{Eval}\parens*{\; \text{Dec} \parens*{\cdot\;,
+            \Red{\fbox{$\mu$}}} \;}$};
+
+        \node[right=of eval] (out)
+        {${\color{Orange} \fbox{$\mu$}}$};
+
+        \path
+        (sk) edge (eval)
+        (eval) edge (out)
+        ;
+
+      \end{tikzpicture}
+    \end{center}
+
+    % \onslide<+->
+    % \begin{itemize}
+    % \item \alert<.>{Goal}: Efficiency!  Minimize depth $d$ and
+    %   size $s$ of decryption ``circuit.''
+
+    %   \medskip
+    % \item Best SHEs {\citationsize [BGV'12]} can evaluate in time
+    %   $\tilde{O}(d \cdot s \cdot \lambda)$.
+    % \end{itemize}
+
+    \smallskip
+
+  \item<+-> Intensive study {\citationsize
+      [G'09,GH'11a,GH'11b,BGV'12,GHS'12b]}, but
+
+    \alert<.>{still very inefficient} -- the main bottleneck in FHE,
+    by far.
+
+    \medskip
+  \item<+->  Notable past results:
+
+    \medskip
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|c|c|c|}
+      \hline
+      \textbf{Notes} & \textbf{Runtime} & \textbf{Reference} \\
+      \hline
+      Seminal work & $\tilde{O}(\lambda^4)$ & {[\citationsize
+        Gentry'09]}\\
+      \hline
+      \alert{One-bit}
+      ciphertexts & $\tilde{O}(\lambda^2)$ for $\lambda$ ciphertexts & 
+      {\citationsize [BGV'12]}\\
+      \hline
+      \alert{``Packed''}
+      ciphertexts & 
+      $\tilde{O}(\lambda)$ & {\citationsize [GHS'12a,GHS'12b]}\\
+      \hline    
+    \end{tabular}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=prev]{Bootstrapping in Quasilinear Time {\citationsize[GHS'12a,GHS'12b]}}
+  % \cnote{The picture still doesn't make sense... in GHS'12b the
+  %   compiler is applied to the entire Dec circuit, not just the
+  %   ``maps.''  The Dec circuit is somehow the composition of various
+  %   log-depth pieces (including mod $\Phi_{k}$), and the compiler is
+  %   applied to the whole. The picture should reflect this... I don't
+  %   think we want or need text saying what the Dec circuit looks like
+  %   internally, only that it is quite complex, with large constant/log
+  %   factors in its depth/size.}
+  \begin{center}
+    \begin{tikzpicture}[node distance=.5cm]
+\node[algorithm=Purple,minimum width=10cm,minimum height=3cm] at (0,0)
+{};
+
+\node at (0,1.1) {Homomorphic Compiler \citationsize [GHS'12a]};
+      \node at (-3,-0.25) [algorithm=Red,text
+        width=2.5cm, minimum height=1.9cm,align=center] (toslots)  {};
+
+ \node at (-3,0.35) {Coeffs to Slots}; 
+\node at (-3,-0.5) [algorithm=Purple,align=center] (modPhi)  { ${} \bmod \Phi_{k}(X)$};
+
+   \node at (0.5,-0.2) [algorithm=Green,text width=1cm,align=center] (round)
+       {SIMD Round};
+% \matrix[algorithm=Red,left=of round, row sep=-2pt] (toCRT) {
+  
+   \node at (3.55,-0.2) [algorithm=Red,text width=1.2cm,align=center] (invert) 
+      {Slots to Coeffs};
+    %  };
+
+       \path
+      (toslots) edge (round)
+      (round) edge (invert)
+     ;
+  
+    \end{tikzpicture}
+  \end{center}
+
+  % \begin{enumerate}
+ %    \item
+ %  % \item<+-> \alert<.>{Map} plaintext coefficients  to slots, reduce
+ %  %   mod $\Phi_{k}(X)$ (log-depth)
+ %  %   \smallskip
+ %  % \item<+-> \alert<.>{Batch-Round} the coefficients using integer
+ %  %   rounding circuit (log-depth)
+ %  %   \smallskip
+  
+ %  %    \item<+-> \alert<.>{Reverse-Map} coefficients to polynomial (log-depth)
+ % \end{enumerate}
+
+  \begin{itemize}
+  \item<+-> Decryption works modulo $k$th cyclotomic polynomial
+    $\Phi_{k}(X)$.
+
+  \item<+-> Decryption circuit is \alert<.>{$O(\log \lambda)$ depth},
+    \alert<.>{$O(\lambda \log \lambda)$ size}.
+
+    \smallskip Can evaluate it homomorphically in
+    \alert<.>{$\tilde{O}(\lambda)$ time} via {\citationsize
+      [GHS'12a]} compiler.
+     
+  \item<+-> \uline{Problems}:
+    \begin{itemize}
+      \smallskip
+    \item<.->[\RedCross] Log-depth mod-$\Phi_{k}(X)$ circuit is
+      \alert<.>{complex}, w/large hidden constants.
+      \smallskip
+    \item<+->[\RedCross\RedCross] {\citationsize [GHS'12a]} compiler is
+      \alert{very complex}, w/\alert{very large polylog overhead}.
+    \end{itemize}
+
+  \item<+->[$\Rightarrow$] Appears \uline{practically slower} than
+    asymptotically worse methods.
+  \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}[label=results]{Our Results}
+  \onslide<+->
+  \alert<.>{Practical} bootstrapping algorithms with
+  \alert<.>{quasilinear} $\tilde{O}(\lambda)$ runtimes:
+
+  \begin{enumerate}
+  \item<+-> For ``\alert<.>{unpacked}'' (single-bit) plaintexts:
+
+    \begin{itemize}
+    \item[\GreenCheck] Extremely simple!  \uline{New technique}:
+      \alert<.>{isolate} the message coefficient.
+      
+      \medskip
+    \item<+->[\GreenCheck] Can easily use \alert<.>{power-of-2
+        cyclotomic rings}: fast, easy to implement.
+
+      \medskip
+    \item<+-> Cf.~{\citationsize [BGV'12]}: $\tilde{O}(\lambda^2)$
+      \alert<.>{amortized} over $\lambda$ ciphertexts, costly to use
+      power-of-2 cyclotomics.
+    \end{itemize}
+
+    \medskip
+  \item<+-> For ``\alert<.>{packed}'' (many-bit) plaintexts:
+
+    \begin{itemize}
+    \item<+-> \uline{New technique}: substantial enhancement of
+      \alert<.>{ring-switching} {\citationsize [GHPS'12]}.
+
+      \medskip
+    \item<+->[\GreenCheck] \alert<.>{Appears very practical}, avoids
+      both main inefficiencies of {\citationsize [GHS'12b]}:
+
+      no homomorphic reduction modulo $\Phi_{k}(X)$, no generic
+      compilation.
+
+      \medskip
+    \item<+->[\GreenCheck] \alert<.>{Completely algebraic description}
+      -- no ``circuits.''
+
+      \medskip
+    \item<+->[\GreenCheck] Works with \alert<.>{any} SHE cyclotomic
+      plaintext ring and modulus.
+
+      % \smallskip
+      % (No special algebraic structure required.)
+    \end{itemize}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[label=example]{Example SHE Scheme\; {\citationsize [LPR'10,BV'11,BGV'12]}}
+  \begin{itemize}
+  \item<+-> Let $\Blue{R} \cong \Z[X]/\Phi_{k}(X)$ be the $k$th
+    cyclotomic ring; let $\Blue{R_{q}} = \Blue{R/qR}$.
+
+    \medskip
+  \item<+-> Ciphertext $c=(c_{0}, c_{1}) \in \Blue{R_{q}^{2}}$ encrypting
+    $\mu \in \Blue{R_2}$ under $s \in \Blue{R}$ satisfies
+    \begin{equation*}
+      v = c_{0} + c_{1} \cdot s\, =\, \tfrac{q}{2} \mu + e \in \Blue{R_q}.  
+    \end{equation*}
+    \vspace{-12pt}
+    \begin{itemize}
+    \item<+-> \alert<.>{Unpacked} ciphertext: $\mu \in \Z_{2}
+      \subseteq \Blue{R_{2}}$, i.e., just a constant polynomial.
+
+      \smallskip 
+    \item<+-> \alert<.>{Packed} ciphertext: $\mu$ may use all of
+      $\Blue{R_2}$, e.g., multiple ``slots'' {\citationsize [SV'11]}.
+      \smallskip
+    \end{itemize}
+
+    \smallskip
+  \item<+-> The \alert<.>{decryption function} is
+    \[ \text{Dec}_{s}(c) := \round{v} = \mu \in \Blue{R_{2}}. \]
+    \onslide<+-> Rounding $\round{\cdot} \colon \Zq \to \Z_{2}$ is
+    applied to coefficients of $v$ in a certain \alert{``decryption
+      basis''} $\Blue{B}$ of $\Blue{R}$:
+    \[v=\sum
+    v_j \cdot \Blue{b_j} \quad \mapsto \quad \sum
+    \round{v_{j}} \cdot \Blue{b_{j}} \in \Blue{R_{2}}. \]
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=practical]{Overview of Our Bootstrapping
+    Algorithm}
+  \onslide<+->
+  \begin{block}{}
+    \begin{itemize}
+    \item Want to homomorphically evaluate decryption function 
+    \end{itemize}
+    \begin{equation*}
+      \text{Dec}_{s}(c) := \round{v} = \round{c_{0} +
+        c_{1} \cdot s} = \round*{\tfrac{q}{2}\mu+e} \in \Blue{R_{2}}.
+    \end{equation*}
+  \end{block}
+  
+  \begin{enumerate}
+  \item<+-> \alert<.-.(1)>{Prepare}: view $c$ as an
+    encryption of \alert<.-.(1)>{plaintext} $v \in \Blue{R_{q}}$. \\
+    {\citationsize (Also switch to larger ciphertext ring and modulus
+      for upcoming homom ops.)}
+  \end{enumerate}
+
+  \onslide<+-> Evaluate the following \alert<.->{homomorphically} on
+  $v$: \smallskip
+  \begin{enumerate}
+    \setcounter{enumi}{1}
+    
+  \item<.-> \alert<.>{Isolate} ``message coefficients'' $v_{j}$, zero
+    out all others.
+    
+    \smallskip For unpacked ciphertext: $\sum v_j \cdot \Blue{b_j} \;
+    \mapsto\; v_{0} \cdot \Blue{b_{0}}$.
+    
+    \medskip
+  \item<+-> \alert<.>{Round} $\sum v_{j} \cdot \Blue{b_{j}} \;
+    \mapsto\; \sum \round{v_{j}} \cdot \Blue{b_{j}} \in \Blue{R_2}$.
+    
+    \begin{enumerate} 
+      \renewcommand{\theenumii}{\alph{enumii}}
+    \item<+-> \alert<.>{Map} message coefficients $v_{j}$ to
+      ``$\Zq$-slots'' of a certain ring $\Red{S_{q}}$.
+      
+      \medskip
+    \item<+-> \alert<.>{Batch-round} every $v_{j}$ to $\round{v_{j}}
+      \in \Z_{2}$, using SIMD ops {\citationsize [SV'11,GHS'12b]}.
+      
+      \medskip
+    \item<+-> \alert<.>{Reverse-map} $\Z_{2}$-slots back to
+      $\Blue{B}$-coefficients.
+    \end{enumerate}
+  \end{enumerate}
+\end{frame}
+
+% \begin{frame}[label=unpacked-main]{Unpacked Ciphertexts:
+%     \alert{Isolating} Message Coefficients}
+%   \begin{itemize}
+%   \item<+-> \alert<.-.(1)>{Isolate} message-carrying coefficient 
+%     $v_{0}$ of $v(X)$ by homomorphically ``\alert<.-.(1)>{tracing
+%       down}'' a tower of cyclotomic rings
+%     $\O_{2k}/\O_{k}/\cdots/\O_{4}/\Z$.
+
+%     \smallskip
+%   \item<+-> \uline{Key idea}: Sum the two \alert<.>{automorphisms} of
+%     $\O_{2i}/\O_{i}$ at each step.
+%     %\cnote{Possible to reveal one row of picture at a time?}
+  
+%     \onslide<+->
+%     \begin{center}
+%       \begin{tikzpicture}[every node/.style={node distance=.7cm}]
+%         \matrix[matrix of nodes, column sep=1cm, row sep=1cm]
+%         {
+%           %
+%           |(V2k)| $v_0 + v_1 X + v_{2} X^{2} + \cdots v_{k-1} X^{k-1}$ \&
+%           |(O2k)| $\Z[X]/(X^{k}+1) \cong \O_{2k}$ \\
+%           % 
+%          |(Vk)| {\uncover<4->{$v_0 + 0 X + v_{2} X^{2} + \cdots + 0 X^{k-1}$ }}\&
+%           |(Ok)| {\uncover<4->{$\Z[X^{2}]/(X^{k}+1) \cong \O_{k}$}} \\
+%           %
+%           % |(V8)|  $v_{0} + v_{k/4} X^{k/4} + \cdots + v_{3k/4} X^{3k/4}$ \&
+%           % |(O8)| $\Z[X^{k/4}]/(X^{k}+1) \cong \O_{8}$ \\
+%           % 
+%           |(V4)| {\uncover<5->{$v_{0} + v_{k/2} X^{k/2}$}} \&
+%           |(O4)| {\uncover<5->{$\Z[X^{k/2}]/(X^{k}+1) \cong \O_{4}$}} \\
+%           % 
+%           |(V2)| {\uncover<6->{$v_{0}$}} \&
+%           |(O2)| {\uncover<6->{$\Z \cong \O_{2} \cong \O_{1}$}} \\ 
+%         };
+
+
+%         \uncover<4->{    \path
+%           (V2k) edge   node[right] {\citationsize
+%             $\tfrac{1}{2}(v(X)+v(-X))$}  (Vk)
+%           (O2k) edge[-] (Ok)
+%           ;}
+        
+%         \uncover<5->{    \path
+%           (Vk) edge[dotted]   node[right] {\citationsize
+%           }  (V4)
+%           (Ok) edge[-,dotted] (O4)
+%           ;}
+
+%         \uncover<6->{    \path
+%           (V4) edge   node[right] {\citationsize
+%             $\tfrac{1}{2}(v(X^{k/2})+v(-X^{k/2}))$}  (V2)
+%           (O4) edge[-] (O2)
+          
+%           ;}
+%       \end{tikzpicture}
+%     \end{center}
+ 
+%   \end{itemize}
+% \end{frame}
+
+% \begin{frame}[c,label=main]
+%   \begin{center}
+%     {\LARGE \structure{Main Result:\\ \medskip Bootstrapping Packed Ciphertexts}}
+%   \end{center}
+% \end{frame}
+
+\begin{frame}[label=packed]{Packed Ciphertexts: Mapping Coefficients to Slots}
+  \begin{itemize}
+   \item<+-> Homom ops induce \alert<.>{SIMD operations} on
+     plaintext ``slots'' {\citationsize [SV'11]}.
+     \begin{center}
+       \begin{tikzpicture}[node distance=.75cm]
+         \node (Sq) {$\Red{S_q}$};
+         \node [right=7.15cm] (Sq2) {$\Red{S_q}$}; 
+
+         {\tikzstyle{every node}=[minimum size=.9cm]
+           \matrix [below=.25cm,nodes=draw,row sep=0mm,column sep=0mm] (slotsinit) {
+             \node {\scriptsize $v_1$}; \& 
+             \node {\scriptsize $v_2$}; \&
+             \node {\scriptsize $\ldots$}; \& 
+             \node {\scriptsize $v_n$}; \\
+           };
+         }
+
+         \node [algorithm=Green, right=of slotsinit] (Eval) {$\text{Eval}(f)$};
+
+         {\tikzstyle{every node}=[minimum size=.9cm]
+           \matrix [right=of Eval,nodes=draw,row sep=0mm,column sep=0mm] (slotsafter) {
+             \node {\scriptsize $f(v_1)$}; \& 
+             \node {\scriptsize $f(v_2)$}; \&
+             \node {\scriptsize $\ldots$}; \& 
+             \node {\scriptsize $f(v_n)$}; \\
+           };
+         }
+
+         \path  
+         (slotsinit) edge (Eval)
+         (Eval) edge (slotsafter)
+         ;
+       \end{tikzpicture}
+     \end{center}
+
+     \medskip
+  \item<+-> A CRT set $\Red{C} = \set{\Red{c_{j}}}$ has $\Red{c_j}=1$
+    in slot $j$, $\Red{c_j}=0$ in other slots.
+    % \begin{itemize}
+    %   \smallskip
+    % \item<.-> 
+    %   \smallskip
+    % \item<.-> Allows for batch operations on the integer values in
+    %   the slots 
+    % \end{itemize}
+    
+    \smallskip
+  \item<+-> \uline{Our goal}: homomorphically map 
+    \[\sum v_{j} \cdot
+    \Blue{b_{j}} \in \Blue{R_{q}} \; \longmapsto\; \sum
+    v_{j} \cdot \Red{c_{j}} \in \Red{S_{q}}.\]
+
+    \onslide<+-> \medskip I.e., evaluate the \alert<.>{$\Z$-linear
+      map} $L \colon \Blue{R} \to \Red{S}$ defined by
+    $L(\Blue{b_{j}})=\Red{c_{j}}.$
+
+    % \begin{tikzpicture}[remember picture,overlay]
+    %   \path (current page.south west) node[anchor=south
+    %   west,font=\citationsize] (Zlinear) {$^{*}\Z$-linear:
+    %   $L(b+b')=L(b)+L(b')$, $L(v \cdot b) = v \cdot L(b)$ for any
+    %   $b,b' \in R, v \in \Z$.};
+    % \end{tikzpicture}
+    % 
+    % \vspace{-20pt}
+
+    \smallskip
+  \item<+-> \alert<.>{Ring-switching} {\citationsize [GHPS'12]} lets
+    us eval any $R'$-linear map
+    \[ L \colon \Blue{R} \to R' \] \onslide<+-> \ldots but only for a
+    \alert<.>{subring} $R' \subseteq \Blue{R}$.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[label=enhance1]{Enhanced Ring-Switching: First Attempt}
+  \begin{itemize}
+  \item<+-> Let $\Blue{R=\O_{k}}$, $\Red{S=\O_{\ell}}$ where
+    $\gcd(k,\ell)=1$, $\Purple{\lcm(k,\ell)=k\ell}$.
+  \end{itemize}
+  
+  \onslide<+->
+  \begin{center}
+    \begin{tikzpicture}[every node/.style={node distance=1.2cm}]
+      \node (R) {$\Blue{R}$};
+      \node[above right=of R] (T) {$\Purple{T} = \Blue{R}+\Red{S} = \Purple{\O_{k\ell}}$};
+      \node[below right=of R,align=left] (E) {$E = \Blue{R} \cap
+        \Red{S} = \Z$};
+      \node[below right=of T,Red] (S) {$S$};
+      
+      \path
+      (R) edge[-] (E)
+      (E) edge[-] (S)
+      (R) edge[->] node[above,sloped] {\citationsize embed} (T)
+      ;
+
+      \uncover<3->{
+        \path
+        (T) edge[->] node[above,sloped] {$\bar{L}$} (S)     
+        (R) edge[->,dashed] node[above] {$L$} node[below] {(induced)} (S)
+        ;}
+    \end{tikzpicture}
+  \end{center}
+  
+  \begin{enumerate}
+  \item<.-> Embed ciphertext $c \in \Blue{R}$ in the
+    \Purple{compositum} ring $\Purple{T}=\Blue{R}+\Red{S}=\Purple{\O_{k\ell}}$
+    \smallskip
+    \begin{itemize}
+    \item<+-> Lemma: for any $E$-linear $L \colon \Blue{R} \to
+      \Red{S}$, there is an $\Red{S}$-linear $\bar{L} \colon
+      \Purple{T} \to \Red{S}$ that agrees with $L$ on $\Blue{R}$.
+    \end{itemize}
+
+  \item<+-> Homomorphically apply $\Red{S}$-linear $\bar{L} \colon
+    \Purple{T} \to \Red{S}$ using ring-switching.
+  \end{enumerate}
+
+  \begin{itemize}
+  \item<+->[\GreenCheck] We just homomorphically evaluated
+    $L(v) = \bar{L}(v)$ !
+
+    \medskip
+  \item<+->[\RedCross\RedCross] \uline{Problem}: degree of
+    $\Purple{T}$ is \alert<.>{quadratic}, therefore so is runtime \&
+    space.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[label=enhance2]{Enhanced Ring-Switching, Efficiently}
+  \begin{itemize}
+  \item<+-> Use a chain of \alert<.>{hybrid rings} $\Purple{H^{(i)}}$
+    to keep the compositums $\Purple{T^{(i)}}$ small.
+
+    \smallskip Equivalently, need $E^{(i)} = \gcd(H^{(i-1)}, H^{(i)})$
+    to be large.
+
+    \medskip
+  \item<+-> Now can only evaluate a sequence of
+    \uline{$E^{(i)}$-linear} fcts $\Purple{H^{(i-1)}} \to
+    \Purple{H^{(i)}}$.
+
+    \onslide<+-> \medskip Can we evaluate our desired map
+    $L(\Blue{b_{j}}) = \Red{c_{j}}$ ?
+
+    \medskip
+  \item<+->[\GreenCheck] Yes! \uline{If} $\Blue{B},\Red{C}$ have a
+    \alert<.>{product structure} induced by cyclotomic towers.
+    \begin{itemize}
+    %   \smallskip
+    % \item<+-> In each step, map one small factor of $\Blue{B}$ to
+    %   corresponding one of $\Red{C}$.
+
+      \smallskip
+    \item<+-> \uline{Key point}: naive ``power'' basis $\set{X^{j}}$
+      of $\Z[X]/\Phi_{k}(X)$ doesn't work.
+
+      \smallskip Instead, need structured \alert<.>{``powerful''} or
+      \alert<.>{``decoding''} bases {\citationsize [LPR'13]}.
+    \end{itemize}
+  \end{itemize}
+
+  \onslide<1->
+\begin{center}
+  \begin{tikzpicture}[every node/.style={node distance=1.3cm}]
+    \node[Blue] (H0) {$R=H^{(0)}$};
+    \node[above right=of H0,Purple] (T1) {$T^{(1)}$};
+    \node[below right=of H0] (E1) {$E^{(1)}$};
+    \node[below right=of T1,Purple] (H1) {$H^{(1)}$};
+    \onslide<4->{
+      \node at (.3,-0.55) [rotate=270] (supsetB0B1) {$\supset$};
+      \node at (0.07,-1.05) (B0B1) {$\Blue{B=B_0B_1}$};
+      \node at (4.15,-0.55) [rotate=270] (supsetB0C1) {$\supset$};
+      \node at (4.2,-1.05) (B0C1) {$\Blue{B_0}\Red{C_1}$};
+      \node at (7.95,-0.55) [rotate=270] (supsetC0C1) {$\supset$};
+      \node at (8.37,-1.05) (C0C1) {$\Red{C_0 C_1 = C}$};
+    }
+    \node[above right=of H1,Purple] (T2) {$T^{(2)}$};
+    \node[below right=of H1] (E2) {$E^{(2)}$};
+    \node[below right=of T2,Red] (H2) {$H^{(2)} = S$};
+
+    \path (H0.south east) edge[-] (E1)
+    (H0.north east) edge[->] node[above,sloped] {\citationsize embed} (T1)
+    (E1) edge[-] (H1)
+    (T1) edge[->] (H1)
+    (H1) edge[-] (E2)
+    (H1) edge[->] node[above,sloped] {\citationsize embed} (T2)
+    (E2) edge[-] (H2.south west)
+    (T2) edge[->] (H2.north west)
+    ;
+
+    \path (H0) edge[->,dashed] node[above]
+    {\citationsize $E^{(1)}$-linear}
+    % node[below] {\citationsize(induced)}
+    (H1)
+    % 
+    (H1) edge[->,dashed] node[above] {\citationsize
+      $E^{(2)}$-linear}
+    % node[below] {\citationsize (induced)}
+    (H2)
+    ;
+  \end{tikzpicture}
+\end{center}
+\end{frame}
+
+\begin{frame}[label=conclusions]{Concluding Thoughts}
+  \begin{itemize}
+  \item<+-> The ``linear'' steps (isolating coeffs \& ring-switching)
+    of our procedure are \alert<.>{fast} and have \alert<.>{small
+      noise expansion}.
+
+    \smallskip The bottleneck is the \alert<.>{high-degree rounding}
+    $\Zq \to \Z_{2}$.
+
+    \medskip
+  \item<+-> Gradually changing $\Blue{B}$ to $\Red{C}$ via hybrid
+    rings \& bases is analogous to the FFT's conversion from ``time
+    basis'' to ``frequency basis.''
+
+    \medskip \onslide<+-> New ring-switching technique should also be
+    useful for other signal-processing transforms having ``sparse
+    decompositions.''
+
+    \medskip 
+  \item<+-> Practical implementation and evaluation are underway.
+  \end{itemize}
+
+  \bigskip
+  \onslide<+->
+  \begin{center}
+    {\Large Thanks!}
+  \end{center}
+  
+\end{frame}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

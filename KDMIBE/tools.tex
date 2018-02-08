@@ -1,0 +1,224 @@
+
+\section{All-But-$d$ Trapdoor Functions}
+\label{sec:all-but-d}
+
+Here we develop a technique for constructing ``all-but-$d$''
+(tag-based) trapdoor functions, which, informally, are trapdoor
+functions for which the trapdoor enables efficient inversion for all
+but (up to) $d$ tags, which are specified at the time of key
+generation.  This is the main tool we use for embedding our
+KDM-CPA-secure public-key cryptosystem into an identity-based
+encryption scheme.
+
+Our construction is a generalization (to higher-degree polynomials) of
+the main technique from~\cite{DBLP:conf/eurocrypt/AgrawalBB10}.  For
+simplicity and somewhat better efficiency, we follow the construction
+of~\cite{DBLP:conf/eurocrypt/MicciancioP12}, specifically the use of a
+fixed, public ``gadget'' matrix $\matG$ as described in
+Section~\ref{subsec:trapdoors}.
+
+\subsection{Algebraic Background}
+
+Let $n \geq 1$, $q \geq 2$, and $d = \poly(n)$
+% ($d$ does not actually grow with $n$, but nevertheless must be bounded
+% by a polynomial in $n$ to allow the construction to proceed in
+% polynomial time)
+be integers.  Let~$\calR$ denote any commutative ring (with
+efficiently computable operations, including inversion of
+multiplicative units) such that the additive group $\G=\Zq^{n}$ is an
+$\calR$-module, and such that there are at least $d+1$ known elements
+$U = \set{u_{0}=0, u_{1}, u_{2}, \ldots} \subseteq \calR$ where
+$u_{i}-u_{j}$ is invertible in $\calR$ (i.e., a unit) for every $i
+\neq j$.  \iflncs \else (These are the only abstract properties of the
+ring we will need for our constructions.  In the next paragraph we
+recall how to construct such a ring for any $n$ and $q$, where $U$ has
+size at least $2^{n}$.)  \fi In particular, we have an (efficiently
+computable) scalar multiplication operation $\calR \times \G \to \G$.
+Note that multiplication by $u \in \calR$ is an invertible linear
+transformation on $\G$ exactly when $u$ is invertible (i.e., a unit).
+We extend scalar multiplication in the natural way to vectors and
+matrices, i.e., $R^{a \times b} \times \G^{b \times c} \to \G^{a
+  \times c}$.  To avoid confusion with vectors and matrices over
+$\Zq$, we use $\vec{u}$ notation for vectors over $\calR$, and $V$
+notation for matrices over $\calR$.
+
+To construct a suitable ring, we use ideas from the literature on
+secret sharing over groups and modules,
+e.g.,~\cite{DBLP:journals/siamdm/DesmedtF94,Fehr98}.  We use an
+extension ring $\calR=\Zq[x]/(F(x))$ for any monic, degree-$n$,
+irreducible $F(x) = F_{0}+F_{1}x + \cdots + F_{n-1}x^{n-1} + x^{n} \in
+\Zq[x]$.  Scalar multiplication $\calR \times \G \to \G$ is defined by
+identifying each $\veca = (a_{0}, \ldots, a_{n-1})^{t} \in \G$ with
+the polynomial $a(x) = a_{0} + a_{1}x + \cdots + a_{n-1}x^{n-1} \in
+\calR$, multiplying in $\calR$, then mapping back to $\G$.  In other
+words, scalar multiplication is defined by the linear transformation
+$x \cdot (a_{0}, \ldots, a_{n-1})^{t} = (0, a_{0}, \ldots,
+a_{n-2})^{t} - a_{n-1}(F_{0}, F_{1}, \ldots, F_{n-1})^{t}$.  It is
+easy to check that with this scalar product, $\G$ is an
+$\calR$-module.  In addition, by the Chinese remainder theorem, $r \in
+\calR$ is a unit if and only if it is nonzero (as a polynomial
+residue) modulo every prime integer divisor $p$ of $q$.  (This is
+because $\Z_{p}[x]/(F(x))$ is a field by construction.)  Letting $p$
+be the smallest such divisor of $q$, we can define the universe $U =
+\set{u_{0}=0, u_{1}, u_{2}, \ldots} \subseteq \calR$ to consist of all
+the polynomial residues having coefficients in $\set{0, \ldots, p-1}$.
+Then $\abs{U} = p^{n} \geq 2^{n}$ and $u_{i}-u_{j}$ is a unit for all
+$i \neq j$, as desired.
+
+\subsection{Basic Construction}
+\label{sec:basic-construction}
+
+As in~\cite{DBLP:conf/eurocrypt/MicciancioP12}, we fix a universal public
+``gadget'' matrix $\matG \in \Zq^{n \times w}$ for which there is an
+efficient Gaussian preimage sampling algorithm for parameter $s \geq
+\wsln$, i.e., an algorithm that given any $\vecu \in \Zq^{n}$ outputs
+a sample from $D_{\lamperp_{\vecu}(\matG), s}$.  E.g., we can let
+$\matG = \matI_{n} \otimes (1, 2, 4, \ldots, 2^{k-1}) \in \Zq^{n
+  \times nk}$ for $k = \ceil{\lg q}$.
+
+As input, the trapdoor generator takes:
+\begin{itemize}[itemsep=0pt]
+\item an integer $d \geq 1$ and a monic degree-$d$ polynomial $f(z) =
+  c_{0} + c_{1} z + \cdots + z^{d} \in \calR[z]$,
+\item a (usually uniformly random) matrix $\bar{\matA} \in \Zq^{(nd)
+    \times \bar{m}}$ for some $\bar{m} \geq 1$, which is made up of
+  stacked submatrices $\bar{\matA}_{i} \in \Zq^{n \times \bar{m}}$ for
+  $i=0,\ldots,d-1$.
+\item  a ``short'' secret
+$\matR \in \Z^{\bar{m} \times w}$ chosen at random from an appropriate
+distribution (typically, a discrete Gaussian) to serve as a trapdoor.
+\end{itemize}
+As output it produces a matrix $\matA \in \Zq^{(nd) \times
+  (\bar{m}+w)}$ (which is statistically close to uniform, when the
+parameters and input $\bar{\matA}$ are appropriately chosen).  In addition, for
+each tag $u \in U$ there is an efficiently computable (from $\matA$)
+matrix $\matA_{u} \in \Zq^{n \times (\bar{m}+w)}$ for which $\matR$
+\emph{may} be a trapdoor, depending on the value of $f(u) \in \calR$.
+
+We write the coefficients of $f(z)$ as a column vector $\vec{c} =
+(c_{0}, c_{1}, \ldots, c_{d-1})^{t} \in \calR^{d}$, and define
+\[ \matA'_{f} :=
+\begin{bmatrix}
+  \bar{\matA} & \vec{c} \otimes \matG
+\end{bmatrix}
+=
+\begin{bmatrix}
+  \bar{\matA}_{0} & c_{0} \cdot \matG \\
+  %\bar{\matA}_{1} & c_{1} \cdot \matG \\
+  \vdots & \vdots \\
+  \bar{\matA}_{d-1} & c_{d-1} \cdot \matG
+\end{bmatrix} \in \Zq^{(nd) \times (\bar{m}+w)}.
+\]
+To hide the polynomial $f$, we output the public key
+\[ \matA := \matA'_{f} \cdot
+\begin{bmatrix}
+  \matI & -\matR \\ & \matI
+\end{bmatrix}
+=
+\begin{bmatrix}
+  \bar{\matA} & (\vec{c} \otimes \matG) - \bar{\matA} \matR
+\end{bmatrix}.
+\]
+Note that as long as the distribution of $[\bar{\matA} \mid
+-\bar{\matA} \matR]$ is statistically close to uniform, then so is
+$\matA$ for any $f$.
+
+The tag space for the trapdoor function is the set $U \subset \calR$.
+For any tag $u \in U$, define the row vector $\vec{u}^{t} := (u^{0},
+u^{1}, \cdots, u^{d-1}) \in \calR^{d}$ (where $0^{0}=1$) and the
+derived matrix for tag $u$ to be
+\[ \matA_{u} := \vec{u}^{t} \cdot \matA +
+\begin{bmatrix}
+  \matzero & u^{d} \cdot \matG
+\end{bmatrix}
+=
+\begin{bmatrix}
+  \vec{u}^{t} \cdot \bar{\matA} & f(u) \cdot \matG
+\end{bmatrix} \cdot \bigT.
+\]
+By the condition in Lemma~\ref{lem:trapgen-sample}, $\matR$ is a
+(strong) trapdoor for $\matA_{u}$ exactly when $f(u) \in \calR$ is a
+unit, because $\matA_{u} \cdot \left[
+  \begin{smallmatrix}
+    \matR \\ \matI
+  \end{smallmatrix} \right] = f(u) \cdot \matG$ and $f(u)$ represents
+an invertible linear transformation when it is a unit. 
+
+\subsection{Puncturing}
+\label{sec:puncturing}
+
+In our cryptosystems and security proofs we will need to generate
+(using the above procedure) an all-but-$d$ trapdoor function that is
+``punctured'' at up to $d$ tags.  More precisely, we are given as
+input:
+\begin{itemize}[itemsep=0pt]
+\item a set of distinct tags $P = \set{u_{1}, \ldots, u_{\ell}}
+  \subseteq U$ for some $\ell \leq d$,
+\item uniformly random matrices $\matA^{*}_{i} \in \Zq^{n \times
+    \bar{m}}$ for $i \in [\ell]$ (which often come from an $\sis$ or
+  $\lwe$ challenge),
+\item  a ``short'' secret
+$\matR \in \Z^{\bar{m} \times w}$ chosen at random from an appropriate
+distribution (typically, a discrete Gaussian) to serve as a trapdoor,
+\item optionally, some uniformly random auxiliary matrices
+  $\matY^{*}_{i} \in \Zq^{n \times k}$ for $i \in [\ell]$ and some $k
+  \geq 0$.
+\end{itemize}
+As output we produce a public key $\matA \in \Zq^{(nd) \times
+  \bar{m}}$ and auxiliary
+matrix $\matY \in \Zq^{(nd) \times k}$ so that:
+\begin{enumerate}[itemsep=0pt]
+\item \label{item:punctured} Each $\matA_{u_{i}}$ matches the
+  challenge matrix $\matA^{*}_{i}$, and $\matR$ is only a ``weak''
+  trapdoor for~$\matA_{u_{i}}$.  More precisely, \[ \matA_{u_{i}} =
+  \begin{bmatrix}
+    \matA^{*}_{i} & \matzero
+  \end{bmatrix}
+  \cdot \bigT. \]
+  
+\item \label{item:trapdoor} $\matR$ is a (strong) trapdoor for
+  $\matA_{u}$ for any \emph{nonzero} $u \in U \setminus P$, i.e.,
+  $f(u)$ is a unit.
+
+\item \label{item:outputs} The auxiliary matrix $\matY_{u_{i}} :=
+  \vec{u_{i}}^{t} \cdot \matY$ equals the auxiliary input
+  $\matY^{*}_{i}$ for each $u_{i} \in P$.
+\end{enumerate}
+We satisfy these criteria by invoking the above trapdoor generator
+with the following inputs $f$ and $\bar{\matA}$:
+\begin{enumerate}[itemsep=0pt]
+\item We define the monic degree-$d$ polynomial \[ f(z) = z^{d-\ell}
+  \cdot \prod_{i \in [\ell]} (z-u_{i}) \in \calR[z] \] and expand to
+  compute its coefficients $c_{i} \in \calR$.  Note that $f(u_{i}) =
+  0$ for every $u_{i} \in P$, and $f(u)$ is a unit for any nonzero $u
+  \in U \setminus P$ because $0 \in U$ and $u_{i}-u_{j}$ is a unit for
+  every distinct $u_{i},u_{j} \in U$.
+\item We define $\bar{\matA}$ using interpolation: let $\matA^{*} \in
+  \Zq^{(n \ell) \times \bar{m}}$ denote the stack of challenge
+  matrices $\matA^{*}_{i}$, and let $V \in \calR^{\ell \times d}$ be
+  the Vandermonde matrix whose rows are the vectors $\vec{u_{i}}^{t}$
+  defined above.  We then let $\bar{\matA} \in \Zq^{(nd) \times
+    \bar{m}}$ be a uniformly random solution to $V \cdot \bar{\matA} =
+  \matA^{*}$.
+
+  Such a solution exists, and is efficiently computable and uniformly
+  random (over the uniformly random choice of $\matA^{*}$ and the
+  random solution chosen).  To see this, extend $V$ to an invertible
+  $d \times d$ Vandermonde matrix over $\calR$ having unit determinant
+  $\prod_{i < j} (u_{j}-u_{i}) \in \calR^{*}$, by adding $d-\ell$
+  additional rows $\vec{u_{j}}^{t}$ for arbitrary distinct $u_{j} \in
+  U \setminus P$.  Likewise, extend $\matA^{*}$ to have dimension $(n
+  d) \times \bar{m}$ by adding uniformly random rows.  Then for any
+  fixed choice of the (extended) matrix $V$, the (extended) matrix
+  $\matA^{*}$ and solution $\bar{\matA}$ are in bijective
+  correspondence, and so the latter is uniformly random because the
+  former is.
+\item We also define the auxiliary matrix $\matY$ similarly using
+  interpolation, as a uniformly random solution to $V \cdot \matY =
+  \matY^{*}$.
+\end{enumerate}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "kdm-ibe"
+%%% End: 

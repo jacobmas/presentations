@@ -1,0 +1,358 @@
+\section{Introduction}
+\label{sec:intro}
+
+Traditional notions of secure encryption, starting with semantic (or
+IND-CPA) security~\cite{DBLP:journals/jcss/GoldwasserM84}, assume that
+the plaintext messages do not depend on the secret decryption key
+(except perhaps indirectly, via the public key or other ciphertexts).
+In many settings, this may fail to be the case.  One obvious scenario
+is, of course, careless or improper key management: for example, some
+disk encryption systems end up encrypting the symmetric secret key
+itself (or a derivative) and storing it on disk.  However, there are
+also situations in which key-dependent messages are used as an
+integral part of an cryptosystem.  For example, in their anonymous
+credential system, Camenisch and
+Lysyanskaya~\cite{DBLP:conf/eurocrypt/CamenischL01} use a cycle of
+key-dependent messages to discourage users from delegating their
+secret keys.  More recently, Gentry's ``bootstrapping'' technique for
+obtaining a fully homomorphic
+cryptosystem~\cite{DBLP:conf/stoc/Gentry09} encrypts a secret key
+under the corresponding public key in order to support unbounded
+homomorphism; the cryptosystem therefore needs to be ``circular
+secure.''  More generally, a system that potentially reveals
+encryptions of any party's secret key under any user's public key
+needs to be ``clique'' or ``key-dependent message'' (KDM) secure.
+This notion allows for proving formal symbolic soundness of
+cryptosystems having complexity-based security
+proofs~\cite{DBLP:conf/esorics/AdaoBHS05}.
+
+Since Boneh \etal's breakthrough
+work~\cite{DBLP:conf/crypto/BonehHHO08} giving a KDM-secure encryption
+scheme, in the standard model, from the Decision Diffie-Hellman
+assumption, a large number of results (mostly positive) have been
+obtained regarding circular-\jnote{Should the dash be there? I'm not
+  sure}\cnote{yep that's usually the way it's done} and KDM-secure
+encryption~\cite{DBLP:conf/tcc/HaitnerH09,DBLP:conf/crypto/ApplebaumCPS09,DBLP:conf/eurocrypt/BarakHHI10,DBLP:conf/crypto/BrakerskiG10,DBLP:conf/eurocrypt/Applebaum11,DBLP:conf/eurocrypt/MalkinTY11,DBLP:conf/tcc/BrakerskiGK11,DBLP:conf/crypto/BrakerskiV11}.
+However, all these works have dealt only with the symmetric or
+public-key settings; in particular, the question of circular/KDM
+security for \emph{identity-based} cryptography has not yet been
+considered.  Recall that in identity-based
+encryption~\cite{DBLP:conf/crypto/Shamir84}, any string can serve as a
+public key, and the corresponding secret keys are generated and
+administered by a trusted Private Key Generator (PKG).
+
+\paragraph{Circular security for IBE.}
+
+In this work we define and construct a circular/KDM-secure
+identity-based encryption (IBE) scheme.  KDM security is
+well-motivated by some natural usage scenarios for IBE, as we now
+explain.
+
+Recall that identity-based encryption gives a natural and lightweight
+solution to revocation, via expiring keys.  The lifetime of the
+cryptosystem is divided into time periods, or ``epochs.''  An identity
+string consists of a user's ``true'' identity (e.g., name)
+concatenated with an epoch; when encrypting, one uses the identity for
+the current epoch.  To support revocation, the PKG gives out a user's
+secret key only for the current epoch, and only if the user is still
+authorized to be part of the system.  Therefore, a user's privileges
+can be revoked by simply refusing to give out his secret key in future
+epochs; in particular, this revocation is transparent to the
+encrypter.
+
+The above framework makes it necessary for users to periodically get
+new secret keys from the PKG, confidentially.  The most lightweight
+method, which eliminates the need for the user to prove his identity
+every time, is simply for the PKG to encrypt the new secret key under
+the user's identity for the previous epoch.  This can be proved
+secure, assuming the underlying IBE is CPA-secure, \emph{as long as
+  there are no cycles of encrypted keys}.  However, if a user deletes
+or loses an old secret key and wants to decrypt a ciphertext from the
+corresponding epoch, it would be natural for the authority to provide
+the old secret key encrypted under the user's identity for the current
+epoch.  But because the current secret key has also been encrypted
+(perhaps via a chain of encryptions) under the old identity, this may
+be unsafe unless the IBE is KDM-secure.
+
+%A similar scenario resulting in encrypted key cycles arises when using
+%an IBE for \emph{forward security}.  To keep old messages secure in
+%the event of an exposed secret key, the user would actively delete his
+%old secret keys from previous epochs at the start of each new epoch;
+%of course, then he can no longer read old messages on his own.  The
+%most natural solution is for PKG to provide the user's old secret key
+%encrypted under the identity for the current epoch, and for the user
+%to destroy it after its use.  Again, without circular security it is
+%not clear whether this solution is safe---even if the adversary never
+%actually compromises a secret key!  More generally, any application in
+%which the PKG or users encrypt secret keys under various identities in
+%the system, without a strictly enforced acyclic structure, may have
+%the possibility of publishing a key cycle and would need KDM security.
+
+% NOT sure that this forward-security story makes enough sense.  If
+% the adversary breaks in and can then request old secret keys, he
+% gets to decrypt old messages too.
+
+% KDM security can also be important when using an IBE for \emph{forward
+%   security}.  Recall that forward security is a way of minimizing the
+% damage caused by exposure of a secret key.  A forward-secure
+% cryptosystem has different keys for each epoch, and guarantees that
+% even if an adversary learns a secret key for some epoch, all messages
+% encrypted in previous epochs remain secret (assuming the old secret
+% keys have been reliably destroyed).
+
+% Forward-secure encryption has
+% been realized for symmetric
+% encryption~\cite{DBLP:conf/ctrsa/BellareY03}, public-key encryption
+% (using identity-based techniques)~\cite{DBLP:journals/joc/CanettiHK07}
+% and (hierarchical) identity-based
+% encryption~\cite{DBLP:conf/ccs/YaoFDL04}.
+
+% Forward-secure encryption come with a significant downside in
+% usability, however: once the old secret keys have been deleted, it is
+% impossible to decrypt messages from previous epochs.  If a user wishes
+% to be able to read old messages, she will either have to store them in
+% the clear after the initial decryption, or keep them encrypted under
+% some longer-lived secret key; either method negates the benefits of
+% forward-secure encryption.  IBE can provide a useful compromise
+% between forward security and the ability to read old messages, by
+% having the PKG store the old secret keys and send them to users upon
+% request.  Again, the most lightweight method would encrypt the old
+% secret key under the user
+
+% It has long been recognized that identity-based encryption can provide
+% a useful compromise between forward-security and the ability to read
+% old messages.  Recall the approach described by Boneh and
+% Franklin~\cite{DBLP:journals/siamcomp/BonehF03} for user revocation,
+% which builds key expiration into an IBE system via epoch-dependent
+% identities that include the current epoch along with the user's
+% ``true'' identity (e.g., name or e-mail address).  With each new
+% epoch, the Private Key Generator (PKG) issues each user a new secret
+% key; in order to a revoke a user, the PKG simply stops issuing new
+% secret keys to that user.  Of course, it is vital that each new secret
+% key be transmitted confidentially so that only the intended user can
+% read it.  An elegant, lightweight solution is simply to encrypt the
+% new secret key under the previous epoch's identity, and deliver it
+% over a public channel.  (For initialization and periodic refreshes, a
+% costlier process that verifies the user's identity and delivers the
+% key over a secure channel can be used.)
+
+% If a user never wants to read old messages, then as long as she
+% securely deletes her old secret keys, it is easy to verify that the
+% above-described techniques provide forward security.  To read old
+% messages, the user can get old secret keys from the PKG again.  Just
+% as with key updates, a natural and lightweight solution is simply for
+% the user to request (over a public channel) an encryption of the old
+% secret key under her identity for the current epoch.  (After
+% decrypting the old message, she can delete the old key.)  However,
+% notice that the system has now revealed an encrypted key cycle!
+% Without circular security, it is unclear whether this natural usage
+% scenario is actually secure.\footnote{Note that the system has also
+%   somewhat weakened the forward-security guarantees in the event of a
+%   break-in, because the attacker will be able to decrypt the old
+%   secret key and all subsequent (but not prior) ones.  However, this
+%   seems inherent to any system that brings old secret keys ``back from
+%   the dead.''  Also, only those old keys (and subsequent ones) that
+%   were encrypted under the \emph{current} epoch's identity are at
+%   risk.}
+
+
+\subsection{Our Contributions}
+\label{sec:contributions}
+
+As already mentioned, in this work we define a form of circular/KDM
+security for identity-based encryption, and give a standard-model
+construction based on the learning with errors (\lwe) problem, hence
+on worst-case lattice problems via the reductions
+of~\cite{DBLP:journals/jacm/Regev09,DBLP:conf/stoc/Peikert09}.
+
+As in prior positive results on circular
+security~\cite{DBLP:conf/crypto/BonehHHO08,DBLP:conf/crypto/ApplebaumCPS09,DBLP:conf/crypto/BrakerskiG10},
+our definition allows the adversary to obtain encrypted ``key
+cliques'' for affine functions of the users' secret keys.  More
+precisely, for any tuple of identities $(id_{1}, \ldots, id_{d})$, the
+attacker may adaptively query encryptions of $f(sk_{id_{1}}, \ldots,
+sk_{id_{d}})$ under any of the identities $id_{j}$, where $f$ is any
+affine function over the message space, and each $sk_{id_{i}}$ is a
+secret key for identity $id_{i}$.  (This obviously specializes to
+encryptions of a single secret key.)  Our attack model is in the style
+of a ``selective identity'' attack, wherein the adversary must declare
+the target identities $id_{1}, \ldots, id_{d}$ (but not the functions
+$f$) before seeing the public parameters of the scheme.  While this is
+not the strongest security notion we might hope for, it appears to at
+least capture the main security requirements of the scenarios
+described above, because encrypted key cycles are only ever published
+for the same ``real-world'' identity at different time epochs.
+Therefore, just as in a standard selective-identity attack for IBE,
+the adversary is actually limited to attacking just a single
+real-world identity, on a set of $d$ epochs (which could, for example,
+include all valid epochs).  We also point out that by a routine hybrid
+argument, security also holds when attacking a \emph{disjoint}
+collection of identity cliques (that are named before seeing the
+public parameters).
+
+Our IBE construction is built from two components, both of which
+involve some novel techniques.  First, we give an \lwe-based
+\emph{public-key} cryptosystem that is clique secure (even for an
+\emph{unbounded} number of users) for affine functions, and is
+suitable for embedding into an IBE like the one
+of~\cite{DBLP:conf/stoc/GentryPV08}.  Second, we construct a
+lattice-based ``all-but-$d$'' trapdoor function that serves as the
+main foundation of the IBE.  We elaborate on these two contributions
+next.
+
+\paragraph{Clique-secure public-key cryptosystem.}
+
+We first recall that Applebaum
+\etal~\cite{DBLP:conf/crypto/ApplebaumCPS09} showed that a variant of
+Regev's so-called ``primal'' \lwe
+cryptosystem~\cite{DBLP:journals/jacm/Regev09} is clique secure for
+affine functions.  Unfortunately, this primal-type system does not
+seem suitable as the foundation for identity-based encryption using
+the tools of~\cite{DBLP:conf/stoc/GentryPV08}.  The first reason is
+that the proof of clique security
+from~\cite{DBLP:conf/crypto/ApplebaumCPS09} needs the users' public
+keys to be completely independent, rather than incorporating a shared
+random string (like the public parameters in an IBE system).  The
+second reason is a bit more technical, and is already described
+in~\cite{DBLP:conf/stoc/GentryPV08}: in primal-style systems, the
+user-specific public keys are exponentially sparse pseudorandom values
+(with unique secret keys), and it is difficult to design an
+appropriate mapping from identities to valid public keys that actually
+admit usable secret keys.
+
+Therefore, we first need to obtain clique security for a so-called
+``dual''-type cryptosystem (using the terminology
+from~\cite{DBLP:conf/stoc/GentryPV08}), in which \emph{every}
+syntactically valid public key has a functional secret key (actually,
+many such secret keys) that can be extracted by the PKG.  It turns out
+that achieving this goal is quite a bit more technically challenging
+than it was for the ``primal''-style schemes.  This is primarily
+because the KDM-secure scheme
+from~\cite{DBLP:conf/crypto/ApplebaumCPS09} (like the earlier one
+from~\cite{DBLP:conf/crypto/BonehHHO08}) has the nice property that
+given the public key alone, one can efficiently generate
+\emph{statistically well-distributed} encryptions of the secret key
+(without knowing the corresponding encryption randomness).  This
+immediately implies circular security for ``self-loops,'' and clique
+security follows from a couple of other related techniques.
+
+Unfortunately, this nice statistical property on ciphertexts does not
+seem attainable for dual-style \lwe encryption, because now valid
+ciphertexts are exponentially sparse and hard to generate without
+knowing the underlying encryption randomness.  In addition, because
+the adversary may obtain an \emph{unbounded} number of key-dependent
+ciphertexts, we also cannot rely on any statistical entropy of the
+secret key conditioned on the public key, as is common in the security
+proofs of most dual-style cryptosystems.
+
+We resolve the above issues by relying on computational assumptions
+twice in our security proof, first when changing the way that
+challenge ciphertexts are produced (i.e., by using knowledge of the
+secret key), and then again when changing the form of the public key.
+Notably, unlike prior works
+(e.g.,~\cite{DBLP:conf/innovations/GoldwasserKPV10,DBLP:conf/tcc/DodisGKPV10})
+in which ciphertexts in intermediate games are created by ``encrypting
+with the (possibly information theoretically revealed) secret key,''
+we are able to avoid the use of super-polynomially large noise to
+``overwhelm'' the slight statistical difference between the two ways
+of generating ciphertexts.  This lets us prove security under fully
+polynomial lattice/\lwe assumptions, i.e., those involving a
+polynomially bounded modulus $q$ and inverse error rate for the \lwe
+problem, and therefore polynomial approximation factors for worst-case
+lattice problems.  We do so by proving the hardness of a version of
+the \emph{extended}-\lwe problem, as defined and left open by the
+recent work of~\cite{DBLP:conf/crypto/ONeillPW11}.  We believe that
+this result should be useful in several other contexts as well.
+
+\paragraph{All-but-$d$ trapdoor functions.}
+
+We use the clique-secure cryptosystem described above as the
+foundation for a clique-secure IBE.  To make the cryptosystem
+identity-based, as in~\cite{DBLP:conf/stoc/GentryPV08} we need to
+embed a ``strong'' trapdoor into the public parameters so that the PKG
+can extract a secret key for any identity.  Here we use the ideas
+behind the tag-based algebraic construction
+of~\cite{DBLP:conf/eurocrypt/AgrawalBB10}, and follow the somewhat
+simpler and more efficient realization recently due
+to~\cite{DBLP:conf/eurocrypt/MicciancioP12}.  We remark that these
+trapdoor constructions are well-suited to security definitions in
+which the adversary attacks a \emph{single} tag, because the trapdoor
+can be ``punctured'' (i.e., made useless for extracting secret keys,
+and useful for embedding an \lwe challenge) at exactly one
+predetermined tag.  Unfortunately, this does not appear to be
+sufficient for our purposes, because in the clique security game, the
+adversary is attacking $d$ identities at once and can obtain challenge
+ciphertexts under all of them.
+
+To resolve the insufficiency of a single puncture, we extend the
+trapdoor constructions
+of~\cite{DBLP:conf/eurocrypt/AgrawalBB10,DBLP:conf/eurocrypt/MicciancioP12}
+so that it is possible to puncture the trapdoor at up to $d$
+arbitrary, prespecified tags.  To accomplish this, we show how to
+statistically hide in the public key a degree-$d$ polynomial
+$f(\cdot)$ over a certain ring~$\mathcal{R}$, so that $f(id_{i})=0$
+for all the targeted tags (identities) $id_{i}$, while $f(id)$ is a
+unit in $\mathcal{R}$ (i.e., is invertible) for all other identities.
+The $d$ components of the public key can be combined so as to
+homomorphically evaluate~$f$ on any desired tag.  The underlying
+trapdoor is punctured exactly on tags $id$ where $f(id)=0$, and is
+effective for inversion whenever $f(id)$ is a unit in $\mathcal{R}$.
+Our construction is analogous to the one
+of~\cite{DBLP:conf/pkc/ChatterjeeS06} in the setting of prime-order
+groups with bilinear pairings (where arithmetic ``in the exponent''
+happens in a field), and the all-but-$d$ lossy trapdoor functions
+of~\cite{DBLP:conf/asiacrypt/HemenwayLOV11}.  However, since
+lattice-based constructions do not work with fields or rings like
+$\Z_{N}$, we instead use techniques from the literature on secret
+sharing over groups and modules,
+e.g.,~\cite{DBLP:journals/siamdm/DesmedtF94,Fehr98}.
+
+We remark that, for technical reasons relating to the number of
+``hints'' for which we can prove the hardness of the extended-\lwe
+problem, we have not been able to prove the KDM-security of our IBE
+under fully polynomial assumptions (as we were able to do for our
+basic public-key cryptosystem).  We instead rely on the conjectured
+hardness of \lwe for a slightly super-polynomial modulus $q$ and
+inverse error rate $1/\alpha$, which translates via known
+reductions~\cite{DBLP:journals/jacm/Regev09,DBLP:conf/stoc/Peikert09}
+to the conjectured hardness of worst-case lattice problems for
+slightly super-polynomial approximation factors, against slightly
+super-polynomial-time algorithms.  Known lattice algorithms are very
+far from disproving such conjectures.
+
+\subsection{Open Problems}
+\label{sec:open-probs}
+
+Our work suggests several interesting problems.  Currently, our
+all-but-$d$ trapdoor function has a key size that grows at least
+linearly with $d$.  Finding a more efficient construction, or an
+``all-but-many'' trapdoor function (which is punctured on
+superpolynomially many tags), such as the one
+of~\cite{DBLP:conf/eurocrypt/Hofheinz12}, would be particularly
+useful.  Another natural extension would be to construct a KDM-secure
+IBE scheme which can be proved fully secure, i.e., under an adaptive
+choice of target identities.
+
+It would also be interesting to construct a KDM-secure IBE from other
+mathematical structures that support IBE, i.e., bilinear pairings and
+quadratic residues.  Both have been used to build KDM-secure
+encryption alone (in~\cite{DBLP:conf/crypto/BonehHHO08}
+and~\cite{DBLP:conf/crypto/BrakerskiG10}, respectively), but by
+imposing a special structure on secret keys; it is unclear to us
+whether this structure can be incorporated into IBE schemes.
+
+A less obvious extension would be to construct an IBE scheme that
+satisfies notions of KDM security for the \emph{master} secret key,
+instead of the user secret keys.  Under a sufficiently strong security
+notion, such a scheme could be used to construct a KDM-CCA secure
+scheme using the transformation
+from~\cite{DBLP:journals/siamcomp/BonehCHK07}.  We note that in a
+concurrent and independent work, Galindo
+\etal~\cite{cryptoeprint:2012:142} solved (using bilinear pairings)
+variants of these problems in which the number of challenge
+ciphertexts is a priori bounded.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "kdm-ibe"
+%%% End: 

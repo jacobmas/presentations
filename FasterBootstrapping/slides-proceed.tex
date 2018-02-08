@@ -1,0 +1,165 @@
+% hack to deal with beamer/pgf bug
+\RequirePackage{atbegshi}
+
+% "draft" makes compilation faster; remove for final version
+% shadow = put drop shadows behind blocks by default
+% xcolor: svgnames imports lots of color names
+% table allows for multi-color table rows
+% pdftex is the compiler
+\documentclass[shadow,xcolor=pdftex,svgnames,table,t]{beamer}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+% need to load tikz defs before beamer defs, for some reason
+\input{tikzhead}
+\input{beamhead}
+
+% common stuff
+\input{../latthead}
+\input{../vecmathead}
+\input{../lrhead}
+\input{../bbhead}
+
+% restricts presentation to specified frames, for faster compilation;
+% comment out the line to get the entire presentation
+
+% \includeonlyframes{hibe}
+
+\begin{document}
+
+\begin{frame}{Bootstrapping}
+  \begin{itemize}
+    \vfill
+  \item ``Bootstrapping'' {\footnotesize [Gen'09]} homomorphically
+    evaluates a decryption circuit to ``refresh'' a ciphertext (i.e.,
+    reduce the noise) for further homom evaluation.
+
+    \begin{itemize}
+    \item \alert{Essential} to \alert{unbounded} FHE.
+
+      \medskip
+    \item \uline{Need}: minimize (multiplicative) \alert{depth} and
+      \alert{size} of decryption circuit.
+
+      Yields a faster, more secure FHE scheme.
+    \end{itemize}
+
+    \vfill
+
+  \item Intensive study, many techniques {\footnotesize
+      [G'09,GH'11a,GH'11b,GHS'12a,GHS'12b]}, but is still inefficient
+    and quite complex
+    \medskip
+
+    \begin{itemize}
+    \item $O(\log n)$ depth, but the hidden constant matters -- a lot!
+    \end{itemize}
+
+    \medskip 
+  
+  \item The (theoretically) most efficient methods on ``packed''
+    ciphertexts {\footnotesize [GHS'12a,GHS'12b]} seem very hard to
+    implement
+    \vfill
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Simple, Efficient Bootstrapping: Main Ideas}
+  \begin{itemize}
+  \item Lattice-based decryption $\text{Dec} \colon \Z^{n} \times
+    \Zq^{n} \to \Z_{2}$ works in two steps.
+
+    \medskip
+    On input $(\vecs, \vecc)$:
+
+    \begin{enumerate}
+    \item Compute $d = \inner{\vecs, \vecc} \in \Zq$. \hfill (Linear,
+      trivial homomorphically.)
+
+      \medskip
+    \item ``Round'' to $\text{msb}(d) := [d \approx \frac{q}{2}] \in
+      \Z_{2}$.\hfill (\alert{Non-linear, expensive homom'ly.})
+    \end{enumerate}
+
+    \smallskip
+    Note: $\text{Dec}$ is run on ``reduced'' ciphertexts: $n$ small, $q
+    \approx \sqrt{n}$.
+  \end{itemize}
+
+  \uline{Advances}:
+  \begin{enumerate}
+  \item A very \alert{simple}, \alert{low-depth} rounding circuit for
+    $q=2^{k}$.
+
+    \begin{itemize}
+    \item Depth exactly $\log_{2}(q/2)$, exactly $(q/2-1)$ mults, no adds.
+      \smallskip
+    \item Best exact depth and circuit size -- by quite a bit.
+    \end{itemize}
+
+    \medskip
+  \item Additional techniques for ``\alert{packed}'' ciphertexts in
+    polynomial rings.
+
+    \begin{itemize}
+    \item Fast homomorphic extraction of polynomial coefficients:
+      \[ a(X) = \sum_{i} a_{i} X^{i} \in R_{q} \quad \longrightarrow \quad
+      a_{i} \in \Z_{q} \]
+    \end{itemize}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Rounding $\Zq$ to $\Z_{2}$}
+  \begin{itemize}
+  \item Example: round $d \in \Z_{8}$ to $\text{msb}(d) \in \Z_{2}$ with
+    an arithmetic formula
+  \end{itemize}
+
+  \begin{center}
+    \begin{tikzpicture}[every node/.style=draw,
+      level 1/.style={draw,sibling distance=3cm},
+      level 2/.style={draw,sibling distance=1.5cm},
+      level 3/.style={sibling distance=0.75cm}]
+      \node {$\cdot \frac12 \in \Z_{2}$} [grow'=up]
+      child { node {$\cdot \frac12 \in \Z_{4}$}
+        child {node {$d-0$}}
+        child {node {$d-1$}}
+      }
+      child {node {$\cdot \frac12 \in \Z_{4}$}
+        child {node {$d-2$}}
+        child {node {$d-3$}}
+      }
+      ;
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{itemize}
+  \item[] (Homomorphic mult-by-$\frac12$ is a null op.)
+
+    \medskip
+  \item In general: $q-1$ mults in a $\log_{2}(q/2)$-depth binary tree
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[c]{Extracting Coefficients, Homomorphically}
+  \begin{center}
+    \begin{tikzpicture}
+      \node (K) at (0,0) {$K=\Q(\zeta_{m},\zeta_{m'})$};
+      \node (K0) at (-3,-3) {$K_{0}=\Q(\zeta_{m})$};
+      \node (K1) at (3,-3) {$K_{1} = \Q(\zeta_{m'})$};
+      \node (Q) at (0,-6) {$\Q$};
+
+      \path[->] (K0) edge node[above,sloped] {embed $ct$} (K)
+      (K) edge node[above,sloped] {$\text{Trace}_{K/K_{1}}$} (K1)
+      (K0) edge node[above,sloped] {$\text{Trace}_{K_{0}/\Q}$} (Q)
+      ;
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

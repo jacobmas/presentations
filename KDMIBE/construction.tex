@@ -1,0 +1,322 @@
+\section{Circular-Secure IBE}
+\label{sec:Construction}
+
+Our IBE scheme is a generalization of the efficient IBE scheme of
+Agrawal \etal~\cite{DBLP:conf/eurocrypt/AgrawalBB10}.  Other than some
+minor changes in the parameters, the main difference is the use of the
+all-but-$d$ trapdoor construction, which allows us to ``puncture'' the
+master public key at up to $d$ identities in the security proof.  The
+scheme has parameters modulus $q$, message space $\Zp$ for some $p <
+q$, dimension $m$, and Gaussian parameters $r$ and $\gamma$.  We give
+example instantiations after describing the scheme.
+
+\subsection{Construction}
+
+The identity space for the scheme is $U\setminus \set{0} \subset
+\calR$, where $U$, $\calR$ are constructed as in
+Section~\ref{sec:all-but-d}.
+\begin{itemize}
+\item$\ibesetup(1^n, d)$: On input security parameter $1^n$ and secret
+  key clique size $d$:
+  \begin{enumerate}
+  \item Sample $\matR \gets D_{\Z, \omega(\sqrt{\log{n}})}^{m{d}\times
+      w}$, and for $i=0, \ldots, d-1$, choose uniformly random
+    $\matA_i \gets \Zqmat{n}{md}$, $\vecy_i \gets \Zqvec{n}$ and let
+    $\tildeA_i=-\matA_i\matR \in \Zqmat{n}{w}$.  (Note that this is
+    simply calling the all-but-$d$ trapdoor construction from
+    Section~\ref{sec:all-but-d} with an empty set of punctured tags.)
+    Let \[ \matA
+    := \begin{bmatrix}\matA_0\\\vdots\\\matA_{d-1}\end{bmatrix}, \quad
+    \tildeA
+    := \begin{bmatrix}\tildeA_0\\\vdots\\\tildeA_{d-1}\end{bmatrix} =
+    -\matA \matR, \quad \vecy
+    := \begin{bmatrix}\vecy_0\\\vdots\\\vecy_{d-1}\end{bmatrix}. \]
+  \item The public key is $mpk=(\matA, \tildeA, \vecy)$. The master
+    secret key is $\msk=(\matR)$.
+  \end{enumerate}
+
+\item $\ibeext(mpk, \msk, u)$ On input $mpk, \msk$ and $u \in U
+  \setminus \{0\} \subseteq \calR$:
+  \begin{enumerate}
+  \item Let $\vec{u}^t := (u^0, u^1, \ldots, u^{d-1})$, $\barA_{u} =
+    \vec{u}^t \cdot \matA$, $\vecy_{u} = \vec{u}^t \cdot \vecy$ and
+    $\matA_{u} = [\vec{u}^{t} \cdot \matA \mid u^{d}\matG - 
+    \vec{u}^{t}\cdot \tildeA] = 
+    [\barA_{u} \mid u^d\matG-\barA_{u}\matR]$, as in
+    Section~\ref{sec:all-but-d}.
+  \item Sample $\vecz_{0} \gets D_{\Z,r}^{n}$, $\vecz_{1} \gets
+    D_{\Lambda_{\vecz_{0}-\vecy_{u}}^{\perp}(\matA_{u}), r}$ using the
+    preimage sampling algorithm (Lemma~\ref{lem:trapgen-sample}), so
+    that $\vecy_{u} = \vecz_{0}-\matA_{u} \vecz_{1}$ (as in the
+    public-key cryptosystem from Section~\ref{sec:KDMCPAscheme}).
+    Output $sk_{u} := \vecz_{1}$.
+    
+    Note that the above is possible because $u^{d} \in \calR$ is a
+    unit, and by our choice of $r$ below, because $s_{1}(\matR) =
+    O(\sqrt{md} + \sqrt{w}) \cdot \wsln = O(\sqrt{md}) \cdot \wsln$
+    with all but $\negl(n)$ probability by Lemma~\ref{Gaussianlemmas}.
+  \end{enumerate}
+  
+\item $\ibeenc(mpk, u, \mu)$: On input master public key, identity $u
+  \in U \setminus \{0\}$, and message $\mu \in \Zp$ do:
+  \begin{enumerate}
+  \item Let $\vec{u}^t := (u^0, u^1, \ldots, u^{d-1})$, $\matA_{u} =
+    [\vec{u}^t \cdot \matA \mid u^d\matG+\vec{u}^t\cdot \tildeA] \in
+    \Zqmat{n}{md+w}$, and $\vecy_{u} = \vec{u}^t \cdot \vecy$.
+  \item Choose $\vecx_0 \gets D_{\Z, r}^{n}$, $\vecx_1^{(1)} \gets D_{\Z,
+      r}^{md}, \vecx_1^{(2)} \gets D_{\Z, \gamma}^{w}$, $x_2 \gets D_{\Z,
+      r}$. Let $\vecx_1^t = [(\vecx_1^{(1)})^t \mid (\vecx_1^{(2)})^t]$.
+  \item Output the ciphertext $\vecc^t = \vecx_0^t[\matA_{u} \mid
+    \vecy_{u}]+[\vecx_1^t \mid x_2] + [\veczero \mid p\cdot \mu]$.
+  \end{enumerate}
+
+\item $\ibedec(mpk, sk_{u} = \vecz_{1}, \vecc)$: output the $\mu \in
+  \Zp$ such that $\vecc^t \left[
+    \begin{smallmatrix}
+      \vecz_{1} \\ 1
+    \end{smallmatrix} \right]$ is closest to $p \cdot \mu$ modulo $q$.
+\end{itemize}
+
+\subsection{Parameters and Correctness}
+\label{subsec:IBEparams}
+
+We need most of the parameters to match the parameters from the
+public-key encryption scheme, with the additional constraint that $r$
+must be large enough that we can run the preimage sampling algorithm
+(Lemma~\ref{lem:trapgen-sample}) in $\ibeext$.  Thus, we choose a
+sufficiently large $m=\Theta(n \log q)$, $r = O(\sqrt{md}) \cdot
+\wsln^{2}$, $\gamma=n^{\omega(1)}$ slightly superpolynomial in $n$,
+$p=\gamma \cdot \poly(n)$ for a sufficiently large $\poly(n)$ term to
+ensure correctness, and $q=p^2$.  We need $m = \Theta(n \log{q})$ so
+that the stacked matrix $\matA \in \Zq^{nd \times md}$ is wide enough
+so that $(\matA, \tildeA=\matA\matR)$ is statistically close to
+uniform (by Lemma~\ref{Gaussianlemmas}) over our choice of $\matA$ and
+$\matR$.
+
+We now prove correctness. Let $\vecc^t \gets \ibeenc(mpk, u, \mu)$ be
+a properly generated encryption of $\mu$ under identity $u$, and let
+$\vecz_{1} \gets \ibeext(mpk, msk, u)$.  Then we have
+\[ \vecc^t \left[
+  \begin{smallmatrix}
+    \vecz_{1} \\ 1
+  \end{smallmatrix} \right] = \vecx_0^t \matA_{u} \vecz_{1} + \vecx_0^t
+\vecy_{u} + \inner{\vecx_1, \vecz_{1}} + x_2 + p\cdot\mu = \inner{\vecx_0,
+  \vecz_{0}} + \inner{\vecx_1, \vecz_{1}} + x_2 + p\cdot\mu.\] Thus,
+decryption will be correct whenever $\abs{\inner{\vecx_0,
+    \vecz_{0}}+\inner{\vecx_1, \vecz_{1}}+x_2} < p/2$.  By
+Cauchy-Schwarz and Lemma~\ref{Gaussianlemmas}, this bound holds except
+with probability negligible in $n$ (over the choice of all the random
+variables), as required.
+
+\subsection{Proof of Security}
+\label{subsec:securityproof}
+
+\begin{theorem}
+  \label{thm:kdm-cpa-ibe}
+  For the above parameters, the above IBE scheme is selective identity
+  KDM-CPA secure with respect to the set of affine functions over
+  $\Zp$, under the $\lwe_{q,\chi}$ assumption for $\chi=D_{\Z,r}$, and
+  the KDM-CPA security of the system from
+  Section~\ref{sec:KDMCPAscheme}.
+\end{theorem}
+
+\begin{proof}
+  Our proof of security proceeds as follows. Game 0 is the actual
+  attack game. In Game 1, we use the all-but-$d$ trapdoors
+  construction from Section~\ref{sec:all-but-d} to construct the
+  master public key, ``puncturing'' it at the targeted identities.
+  Finally, in Game 2, we play the KDM-CPA security game against a
+  challenger running the public-key encryption scheme from
+  Section~\ref{sec:KDMCPAscheme} and use the outputs of the challenger
+  to simulate Game 1. This requires some care because the IBE secret
+  keys and ciphertexts have larger dimension by an additive term
+  of~$w$ (the width of $\matG$).  To address this, we fill in the
+  missing dimensions of the secret keys by choosing them ourselves,
+  and use knowledge of the master secret key to fill in the missing
+  dimensions of the ciphertexts (here is where we use the fact that
+  noise with parameter $\gamma$ ``overwhelms'' noise with parameter
+  $r$).  Selective identity KDM-CPA security then follows from the
+  KDM-CPA security of the public-key encryption scheme.
+  
+  \cnote{TODO: make the notation in the proof match what's above.}
+  \paragraph{Game 0.} This is the actual security game from
+  Section~\ref{subsec:KDM}. For bit $\beta$, we respond to KDM queries
+  $(f_{\matV_0, w_0} = \sum_{j \in
+    [d]}\inner{\vecv_{j,0},\vecz_{j,1}}+w_{0}, f_{\matV_1, w_1} =
+  \sum_{j \in [d]}\inner{\vecv_{j,1}, \vecz_{j,1}}+w_1, i)$ by
+  encrypting $f_{\matV_{\beta}, w_{\beta}}$ under identity $u_{i}$. We
+  respond with ciphertext $\vecc$, where (for $\vec{u}_i^t = (u_i^0,
+  u_i^1, \ldots, u_i^{d-1})$)
+  \[\vecc^t = \vecx_0^t[\vec{u}_i^t \cdot \matA \mid \vec{u}_i^t \cdot
+  \tildeA \mid \vec{u}_i^t \cdot \vecy]+[\vecx_1^t \mid x_2] + [\veczero
+  \mid p \cdot f_{\matV_{\beta}, w_{\beta}}].\]
+
+  \paragraph{Game 1.} In this game, we use the all-but-$d$ trapdoor
+  construction from Section~\ref{sec:all-but-d} to ``puncture" the
+  public key at each of the $d$ challenge identities in a
+  statistically indistinguishable manner.
+
+  We first choose $d$ uniform random matrices $\matA_i^* \in \Zq^{n
+    \times md}$ and master secret key $\matR \gets D_{\Z,
+    \omega(\sqrt{\log{n}})}^{m{d}\times w}$. In order to successfully
+  simulate the security game, we still need to know a secret key for
+  each of the $d$ challenge identities. So, for $i \in [d]$, we choose
+  the secret key for identity $u_i$ to be $\vecz_{i,1} \gets
+  D_{\Z,r}^{md+w}$ and choose error $\vecz_{i,0} \gets
+  D_{\Z,r}^{n}$. We then set $\vecy_i^* = \vecz_{i,0} - [\matA_i^*
+  \mid -\matA_i^*\matR]\vecz_{i,1}$.
+
+  Lemma~\ref{Gaussianlemmas} implies that this is statistically close
+  to choosing the $\vecy_i^*$ uniformly at random and then sampling
+  $\vecz_{i,1} \gets D_{\lamperp_{\vecz_{i,0}-\vecy_i^*}([\matA_i^*
+    \mid -\matA_i^*\matR]), r}$.  Recalling that as a result of the
+  all-but-$d$ construction, we will have that $[\matA_i^* \mid
+  -\matA_i^*\matR] = [\vec{u_i}^t \cdot \matA \mid u_i^d\matG
+  -\vec{u_i}^t \cdot \matA\matR]$ and that $\vecy_i^* = \vec{u_i}^t
+  \cdot \vecy$, we see that the master public key and the secret keys
+  for the challenge identities have been generated in a manner
+  statistically indistinguishable from how they were generated in Game
+  0.
+    
+  So, we invoke the all-but-$d$ trapdoor construction on $\matA_i^*,
+  \vecy_i^*$, $\matR$ and identities $u_i$ (that we received from the
+  adversary), and receive back $\matA_i, \tildeA_i =
+  -\matA_i\matR+c_i\matG, \vecy_i$ for $i =0, \ldots, d-1$ which we
+  make the master public key and give to the adversary.
+
+  Secret key extractions and responses to KDM queries proceed normally
+  (using the now ``punctured'' public key), and so responses to KDM
+  queries are now of the form
+  \begin{equation}\vecc^t = \vecx_0^t[\matA_i^{*} \mid
+    -\matA_i^{*}\matR \mid \vecy_{i}^{*}]+[\vecx_1^t \mid x_2] +
+    [\veczero \mid p \cdot
+    f_{\matV_{\beta}, w_{\beta}}].
+  \end{equation}
+    
+  \paragraph{Game 2.} In this game, we attack the KDM-CPA secure
+  scheme described in Section~\ref{sec:KDMCPAscheme} and use it to
+  simulate Game 1. The secret keys in that construction only
+  correspond to the ``top parts'' (dimension $md$) of the secret keys
+  in the IBE scheme (denoted below as $\vecz_{i}^{(1)}$). The ``bottom
+  parts'' (dimension $w$) will be denoted $\vecz_{i}^{(2)}$, with
+  similar notation for syndromes $\vecy_i^{(1)}, \vecy_i^{(2)}$.  We
+  will be choosing the ``bottom parts'' of the keys on our own, as
+  described below.
+   
+  \emph{Answering KDM queries.}  After receiving the $d$ challenge
+  identities from the adversary, we begin playing the KDM-CPA security
+  game (for the same values of $m$ and $d$) against a challenger.  The
+  challenger sends us each user's public key as $(\matA_i^*,
+  (\vecy_i^{*})^{(1)}=\vecz_{i,0}-\matA_i^*\vecz_{i,1}^{(1)})$ for $i
+  \in [d]$, where the $\vecz_{i, 0}$ and $\vecz_{i,1}^{(1)}$ are
+  secret.  To construct the full syndrome $\vecy_i^*$ for each
+  challenge identity $u_i$ in the IBE scheme, we sample the ``bottom
+  part'' $\vecz_{i,1}^{(2)} \gets D_{\Z, r}^{w}$, compute
+  $(\vecy_i^{*})^{(2)} = \matA_i^{*}\matR\vecz_{i,1}^{(2)}$, and then
+  set $\vecy_i^* = (\vecy_i^{*})^{(1)}+(\vecy_i^{*})^{(2)}$. Note that
+  as in the previous game, the $\matA_i^*$, $\vecy_i^*$ remain
+  statistically close to uniform by Lemma~\ref{Gaussianlemmas}.
+
+  We then sample $\matR \gets D_{\Z,
+    \omega(\sqrt{\log{n}})}^{m{d}\times w}$ as usual, and use
+  $(\matA_i^*, \matR, \vecy_i^*, u_i)$ as the input to our all-but-$d$
+  trapdoor construction, receiving back $\matA_i$, $\tildeA_i =
+  -\matA_i\matR+c_i\matG$, and $\vecy_i$ for $i = 0, \ldots, d-1$,
+  which we make the master public key.
+    
+  We continue to respond to secret key extraction queries as in Game
+  1, using our all-but-$d$ trapdoor to extract secret keys for all
+  non-challenge identities.
+
+  We now show how to respond to the adversary's key-dependent message
+  queries with encryptions of $f_{\matV_{\beta}, w_{\beta}}$, where
+  $\beta$ parameterizes the KDM-CPA security game that we are playing
+  (and is unknown to us because that scheme is KDM-CPA secure). To do
+  so, we need to modify the functions $f_{\matV_{0}, w_0},
+  f_{\matV_{1}, w_1}$ given to us by the adversary before passing them
+  along to the KDM-CPA challenger. For $k \in \bit$, our modifications
+  will add to the constant part of each function ($w_{k}$) the sum of
+  the inner products of the ``bottom part'' of each affine function
+  vector ($\vecv_{j, k}^{(2)}$) with the ``bottom part'' of each
+  secret key ($\vecz_{j, 1}^{(2)}$). Thus, instead of only being an
+  encryption of a function of ``top part'' of the secret key, the
+  ciphertext we receive back from the KDM-CPA challenger will in fact
+  be an encryption of $f_{\matV_{k}, w_{k}}$, which is exactly what we
+  need.
+
+  Concretely, to respond to key-dependent message queries
+  $(f_{\matV_0, w_0}, f_{\matV_1, w_1}, i)$, we first
+  let $\vecv'_{j, k} = \vecv_{j,k}^{(1)}$, $w'_{k} = w_{k}+\sum_{j \in
+    [d]}\inner{\vecv_{j,k}^{(2)}, \vecz_{j,1}^{(2)}}$ for $k \in
+  \bit$.  We then query the KDM-CPA challenger with \[(f'_ {\matV_{0},
+    w_0} = \sum_{j \in [d]}\inner{\vecv'_{j, 0}, \vecz_{j,1}} + w'_0,
+  f'_{\matV_1, w_1} = \sum_{j \in [d]}\inner{\vecv'_{j, 1},
+    \vecz_{j,1}} + w'_1, i).\]  
+    Since for $k \in \bit$, $\sum_{j \in [d]}\inner{\vecv'_{j, k}, \vecz_{j,1}^{(1)}}
+    +\vecw_{k}' = \sum_{j\in [d]}\inner{\vecv_{j,k}, \vecz_{j,1}} + \vecw_{k} =
+  f_{\matV_{k}, w_{k}}$, we will receive back an encryption of
+  $\mu=f_{\matV_{k}, w_{k}}$ for $k=\beta$ as
+  \[\vecc'^t = [\vecb_0^t \mid b_2^{(1)} + \mu],\]
+  where $\vecb_0^t = \vecx_0^t\matA_i^{*}+(\vecx_1^{(1)})^t$,
+  $b_2^{(1)}=\vecx_0^t(\vecy_i^{*})^{(1)}+x_2$ for $\vecx_0 \gets D_{\Z,
+    r}^{n}$, $\vecx_1^{(1)} \gets D_{\Z, r}^{md}$ and $x_2 \gets D_{\Z, r}$,
+  and $\mu = p \cdot f_{\matV_{\beta}, w_{\beta}} = p \cdot 
+  (\sum_{j \in [d]}\inner{\vecv_{j, \beta},
+    \vecz_{j,1}} + w_{\beta})$, as in the actual scheme from
+  Section ~\ref{sec:KDMCPAscheme}.
+
+  We then compute $\vecb_1^t = -\vecb_0^t\matR+(\vecx_1^{(2)})^t$ and
+  $b_2^{(2)} = \vecb_0^t\matR\vecz_{i,1}^{(2)}$, where as in the actual
+  scheme, $\vecx_1^{(1)} \gets D_{\Z,\gamma}^{w}$. Letting $b_2 =
+  b_2^{(1)}+b_2^{(2)}$, we finally output as our response
+  \[\vecc^t = [\vecb_0^t \mid \vecb_1^t \mid b_2+\mu].\]
+
+  To complete the proof, we need to show that these ciphertexts are
+  statistically indistinguishable from the ciphertexts in Game 1. The
+  left-most part ($\vecb_0^t$) is generated by the KDM-CPA scheme with
+  exactly the same distribution we used to generate $\vecb_0^t =
+  \vecx_0^t\matA_i^{*}+(\vecx_1^{(1)})^t$ in Game 1.
+
+  In Game 1, the center part of the ciphertexts was generated as
+  $-\vecx_0^t\matA_i^{*}\matR+(\vecx_1^{(2)})^t$, while in this game, the center
+  part is generated as
+  $\vecb_1^t=-\vecb_0^t\matR+(\vecx_1^{(2)})^t=-\vecx_0^t\matA_i^{*}\matR+(\vecx_1^{(2)})^t+(\vecx_1^{(1)})^t\matR$. Lemma~\ref{Gaussianlemmas}
+  gives that $\length{(\vecx_1^{(1)})^t\matR} \leq \poly(n)$ (except with
+  negligible probability), so that by Lemma~\ref{sumplusgaussian}, the
+  statistical distance between $(\vecx_1^{(2)})^t$ and
+  $(\vecx_1^{(2)})^t+(\vecx_1^{(1)})^t\matR$ is at most $\poly(n)/\gamma =
+  \negl(n)$. Since the rest of the center part is distributed
+  identically in Games 1 and 2, we have that the center part in Game 1
+  is statistically indistinguishable from the center part in Game 2.
+
+  Finally, in Game 1, the right part of the ciphertexts was generated
+  as 
+  \[\vecx_0^t\vecy_i^*+x_2+p\cdot (\sum_{j \in [d]}\inner{\vecv_{j,\beta},
+    \vecz_{j,1}} + w_{\beta}).\] In this game, the right part is
+  generated as
+ \begin{align*}
+  b_2+\mu&=\vecx_0^t(\vecy_i^*)^{(1)}+
+  \vecx_0^t\matA_i^*\matR\vecz_{i,1}^{(2)}+(\vecx_1^{(1)})^t\matR\vecz_{i,1}^{(2)}+x_2+\mu\\
+  &=\vecx_0^t\vecy_i^*+(\vecx_1^{(1)})^t\matR\vecz_{i,1}^{(2)}+x_2+p\cdot
+  (\sum_{j \in [d]}\inner{\vecv_{j, \beta}, \vecz_{j,1}} + w_{\beta}).\\  
+  \end{align*} Now, we
+  have by Lemma~\ref{Gaussianlemmas} that
+  $|(\vecx_1^{(1)})^t\matR\vecz_{i,1}^{(2)}| \leq \poly(n)$ except with negligible
+  probability. Lemma~\ref{sumplusgaussian} then gives that the
+  statistical distance between $x_2$ and
+  $x_2+(\vecx_1^{(1)})^t\matR\vecz_{i,1}^{(2)}$ is at most $\poly(n)/\gamma =
+  \negl(n)$, and since the rest of the right part is distributed
+  identically in Games 1 and 2, we have that the right part in Game 1
+  is statistically indistinguishable from the right part in Game 2.
+
+  Therefore, the ciphertexts in Game 1 are statistically
+  indistinguishable from the ciphertexts in Game 2, and so the two
+  games as a whole are statistically indistinguishable. The theorem
+  follows.
+\end{proof}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "kdm-ibe"
+%%% End: 
