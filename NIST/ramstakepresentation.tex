@@ -119,6 +119,7 @@
 %\end{frame}
 \section{Basic Idea}
 
+
 \begin{frame}    
     \frametitle{Another Variation on Learning With Errors}
 
@@ -240,17 +241,23 @@ On input randommess $seed$
 \onslide<+->
 On input $pk=(seed\_a,b)$, message $\mu$
 \begin{enumerate}
-\item<+-> Compute $r=xof(\mu)$.
+\item<+-> Expand message into necessary randomness $\vecr=xof(\mu)$.
 \begin{itemize}
-\item<.-> $r$ will be used both to sample 
+\smallskip
+\item<.-> Message used as randomness a la Fujisaki-Okamoto 
 \medskip
-\item<.-> Reason for $\text{xof}$: to
-  shorten public key (a la Kyber/NewHope/Frodo)
+\item<.-> Note: no actual CCA security proof 
 \end{itemize}
+\item<+-> Recover $a$ from $seed\_a$
 \medskip
-\item<+-> Choose \alert{low-weight} $s, e \in \Z_q$
+\item<+-> Sample \alert{low-weight} $s', e' \in \Z_q$ (via $\vecr$)
 \medskip
-\item<+-> Compute $b = s\cdot a + e \bmod{q}$. 
+\item<+-> Compute $c_1 = s'\cdot a + e' \bmod{q}$, $c_2 = s'\cdot b
+  \bmod{q}$.
+\begin{itemize}
+\item<+-> \alert{Note}: No extra noise added to $c_2$; attack possible
+  ????
+\end{itemize} 
 \medskip
 \item<+-> Secret key is $(s)$, public key is $(seed\_a, b)$
 \end{enumerate}
