@@ -75,6 +75,8 @@
 
 \newcommand{\Red}[1]{{\textcolor{red} #1}}
 
+\input{beamhead}
+
 \begin{document}
 
 %title page
@@ -118,7 +120,8 @@
 \begin{frame}    
     \frametitle{Another Variation on Learning With Errors}
 
-    \begin{block}{(Ring)-LWE reminder, $q=\poly(\lambda)$}
+    \onslide<1->
+    \begin{block}{(Ring)-LWE reminder}
         \begin{description}
             \item[KeyGen$(1^{\lambda})$:]
 \begin{itemize}
@@ -140,12 +143,41 @@
         \end{description}
     \end{block}
 
-    \begin{block}{What if $R=\Z$, $q=2^{O(\poly(\lambda))}$}
+    \onslide<2->
+    \begin{block}{What if Ring is the Integers?}
         \begin{itemize}
-            \item   
-            \item Improve cross domain language modelling with skipgrams
+          \item Modulus clearly needs be $q=2^{Omega(\poly(n)}}$ to avoid
+          trivial brute-force
+            \item[\RedCross]  Easy to break with LLL if \alert{short} =
+              Euclidean norms
+            \item Alternative: \alert{short} = Hamming weight in binary
         \end{itemize}
     \end{block}
+\end{frame}
+
+\begin{frame}    
+    \frametitle{Hamming Weights and Mersenne Primes
+\begin{block}{Hamming Weights}
+\item Brief reminder: Hamming weight of a vector is number of non-zero
+  elements
+\end{block}
+\begin{block}{Mersenne Primes}
+\item Natural representation: modulo Mersenne numbers.
+\item Need prime to avoid decomposition attacks???
+\item[\RedCross] Very limited choice of moduli
+\end{block}
+\end{frame}
+
+\begin{frame}\frametitle{Ramstake Description}
+
+yadda yadda go a bit into the reconciliation method
+\end{frame}
+
+\begin{frame}\frametitle{Parameter Sizes}
+\end{frame}
+
+\begin{frame}\frametitle{Attacks (Part 1)}
+
 \end{frame}
 
 
