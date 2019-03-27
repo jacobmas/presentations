@@ -1,0 +1,88 @@
+\newif\iflncs\lncstrue
+\documentclass[oribibl,envcountsect,envcountsame]{llncs}
+%\usepackage{times}        // Not Allowed for TCC ---Daniel
+%\usepackage{fullpage}    // Not Allowed for TCC submission ---Daniel
+\usepackage{microtype}
+\usepackage{amsmath,amsfonts,amssymb}
+%\usepackage{hyperref}
+% mathabx overrides many math fonts with ugly ones; instead, add
+% individual commands in head.tex (see declaration of \boxplus etc.)
+%\usepackage{mathabx}
+%\usepackage[amsmath,amsthm,thmmarks,hyperref]{ntheorem}
+
+\usepackage{float}
+\usepackage{mathtools}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage{enumitem}
+
+% show equation numbers only for referenced equations
+%\mathtoolsset{showonlyrefs}
+
+\newif\iffull\fulltrue
+
+
+\input{head}
+%\input{paperhead}
+
+
+\newcommand{\Lat}{\Lambda}
+
+\newcommand{\setbad}{\textsf{BAD}}
+\newcommand{\setguesses}{\textsf{GUESSES}}
+
+
+\usepackage{xcolor}
+\newcommand{\daniel}[1]{Daniel: #1}
+\newcommand{\todo}[1]{TO-DO: #1}
+
+\pagestyle{plain}
+
+
+%%%%
+
+\title{FHE Improvement Thoughts}
+
+\author{%
+  Jacob Alperin-Sheriff
+}
+\institute{NIST
+  \email{jacob.alperin-sheriff@nist.gov}
+}
+
+\begin{document}
+ % \floatstyle{boxed}
+ % \restylefloat{figure}
+
+\maketitle
+\thispagestyle{plain}
+%\begin{abstract}
+%  
+%  
+%\input{abstract}
+
+
+%\end{abstract}
+
+% \paragraph{Keywords.} fully homomorphic encryption, bootstrapping,
+% lattice-based cryptography
+
+%\clearpage
+%\pagenumbering{arabic} 
+
+Beginning
+
+
+
+
+
+\bibliographystyle{alpha}
+\bibliography{lattices,crypto,ibe,fhe,numtheory}
+
+\end{document}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

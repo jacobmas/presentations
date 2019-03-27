@@ -1,0 +1,143 @@
+\newcommand{\bbF}{\mathbb{F}}
+\section{Introduction}
+
+\subsection{Basics of Scheme}
+\label{sec:basics-scheme}
+
+
+
+In the simplified version of UOV where the polynomials are all
+homogenous, we have that each ``secret'' polynomial can be represented by 
+
+\[\matF^{(i)} = \begin{bmatrix}\matzero&\matA^{(i)}\\\matB^{(i)} &
+  \matC^{(i)}\\\end{bmatrix} \in \mathbb{F}^{(n+v) \times (n+v)},\]
+
+where $\matA^{(i)} \in \bbF^{n \times v}, \matB^{(i)} \in \bbF^{v
+  \times n}, \matC^{(i)} \in \bbF^{v \times v}$, and we have 
+
+\[\matG^{(i)}=\matS^{t}\matF^{(i)}\matS,\]
+
+where 
+\[\matS
+= \begin{bmatrix}\matS_{1,1}&\matS_{1,2}\\\matS_{2,1}&\matS_{2,2}\\\end{bmatrix} \in
+  \bbF^{(n+v) \times (n+v)}\]
+ is invertible. 
+
+
+
+
+Recall that to sign a message $\vecm \in \F^{n}$, the signer (who
+knows the ``hidden'' matrices $\matF^{(i)}$) first chooses
+$\vecw^{(2)} \gets \mathbb{F}^{v}$ uniformly at random
+and then computes 
+
+\[\vecv_i^t := (\vecw^{(2)})^t(\matB^{(i)}+(\matA^{(i)})^t) \in \F^{1
+  \times n}, \quad m'_i := m_i -
+(\vecw^{(2)})^t\matC^{(i)}\vecw^{(2)} \in \F\]
+
+Letting $\matV = \begin{bmatrix}\vecv_1^{t}\\ \ldots \\ \vecv_n^t
+  \\\end{bmatrix}$, we can then find a full (pre)-signature $\vecw \in
+\F^{v+n}$ by solving the equation
+
+\begin{equation}\label{eq:solvesystem}
+\matV\vecw^{(1)}=\vecm'\end{equation}
+\emph{if a solution exists}. If a solution
+does not exist, the signer must repeat the procedure by sampling $\vecw^{(2)}$
+again and checking again. 
+
+It is important to note that there is not a unique secret $\matS \in
+\F^{(n+v)\times (n+v)}$ that induces each hidden $\matF^{(i)}=\matS^{-t}\matG^{(i)}\matS^{-1}$
+into having the proper form with the top-left corner equal to
+$\matzero$. Indeed, it is easy to see that we can let
+$\matS=\matT\matS'$, where
+$\matT=\begin{bmatrix}\matW&\matY\\\matzero&\matZ\\\end{bmatrix} \in
+\F^{(n+v) \times (n+v)}$,  for any invertible $\matW \in \F^{n \times
+  n}, \matZ \in \F^{v \times v}$ and any $\matY \in \F^{n \times v}$,
+and we will have that $\matF'^{(i)} =\matT^{t}\matF^{(i)}\matT$ will
+have the top-left corner equal to $\matzero \in \F^{n \times n}$. 
+
+In particular, whenever there is a solution to $\matS_{2,2}\matX=\matS_{2,1}$ (which
+should be the case with probability roughly $1-1/q$ if $\F=\text{GF}(q)$),we may set
+$\matS'=\begin{bmatrix}\matI&\matzero\\\matX&\matI\\\end{bmatrix}$, in
+which case
+$\matS'^{-1}=\begin{bmatrix}\matI&\matzero\\-\matX&\matI\\\end{bmatrix}$. We
+will assume that the secret key $\matS$ is of this special form for
+the remainer of this work. 
+
+Finally, to compute the actual signature $\vecu$ from $\vecw$, the signer then
+computes $\vecu=\matS^{-1}\vecw$. 
+
+\subsection{An Attacker?}
+\label{sec:an-attacker}
+
+The key hail mary hope here is that knowledge of the distribution of the signatures
+received will itself leak $\matS'$, because we know how each signature
+was devised and we know that Equation ~\ref{eq:solvesystem} has a
+solution. 
+Let $\vecu^t = [(\vecu_1^t \mid (\vecu_2^t)]$ be a signature. 
+
+
+Let 
+
+\[\veca_i^t =
+\vecu_1^t(\matG_{1,1}^{(i)}+(\matG_{1,1}^{(i)})^t)+\vecu_2^t(\matG_{2,1}^{(i)}+(\matG_{1,2}^{(i)})^t)
+\in \F^{1 \times n}\]
+and
+\[\vecb_i^t=\vecu_1^t(\matG_{1,2}^{(i)}+(\matG_{2,1}^{(i)})^t)+\vecu_2^t(\matG_{2,2}^{(i)}+(\matG_{2,2}^{(i)})^t)
+\in \F^{1 \times v}\] 
+and 
+\[c_i=\vecu_1^t(\matX^t\matG_{2,2}^{(i)}\matX)\vecu_1+\vecu_1^t\matX^t\matG_{2,2}^{(i)}\vecu_2+\vecu_2^t\matG_{2,2}^{(i)}\matX\vecu_1+\vecu_2^t\matG_{2,2}^{(i)}\vecu_2\]
+Then (recalling the definition of $\vecv_i$ from above)
+\[\vecv_i=\veca_i^t+\vecb_i^t\matX\]
+\[m_i' = m_i - c_i\]
+
+So we end up with
+
+\begin{equation}\label{eq:secondnew}
+\matV\vecu_1 = \vecm'
+\end{equation}
+
+Letting $\vect_1=\matX\vecu_1$ be the unknown variable, we then have 
+
+Since $\vect_1$ is linear 
+we can end up with 
+
+\[a_i' =
+\left((\vecu_1^t(\matG_{1,1}^{(i)}+(\matG_{1,1}^{(i)})^t)+\vecu_2^t(\matG_{2,1}^{(i)}+(\matG_{1,2}^{(i)})^t))\right)\vecu_1
+\in \F^{1 \times n}\]
+and
+\[b'_i=\vecu_1^t(\matG_{1,2}^{(i)}+(\matG_{2,1}^{(i)})^t)\vect_1
+\in \F^{1 \times v}\] 
+and 
+\[c'_i=\vect_1^t\matG_{2,2}^{(i)}\vect_1+\vecu_2^t\matG_{2,2}^{(i)}\vecu_2\]
+Then we still have that 
+
+\[\veca'+\vecb' = \vecm - \vecc',\]
+
+so that finally (NOTE: $\vecu$s should have $j$ superscripts too) , letting 
+\[(\vecr^{(j)}_i)^t=\vecu_1^t(\matG_{1,2}^{(i)}+(\matG_{2,1}^{(i)})^t)\]
+
+\[s^{(j)}_i=m^{(j)}_i-\vecu_2^{t}\matG_{2,2}^{(i)}\vecu_2^{t}-\left((\vecu_1^t(\matG_{1,1}^{(i)}+(\matG_{1,1}^{(i)})^t)+\vecu_2^t(\matG_{2,1}^{(i)}+(\matG_{1,2}^{(i)})^t))\right)\vecu_1
+\]
+
+
+we have 
+
+\[(\vect^{(j)}_1)^{t}\matG_{2,2}^{(i)}\vect^{(j)}_1+\inner{\vecr^{(j)}_i,\vect_1^{(j)}}=s^{(j)}_i\]
+
+which substituting for $\vecu_1$ is a quadratic equation in the
+$\matX$ variables. 
+
+In theory, enough would allow linearization ...
+
+But wait, this could be found ourselves with no oracle queries by
+simply choosing a lot of $\vecu$s uniformly at random and re-writing. 
+
+I bet it doesn't work because they're not in the right space or
+something? 
+
+
+
+%%% Local Variables:
+%%% TeX-master: "mqstuff.tex"
+%%% End:
